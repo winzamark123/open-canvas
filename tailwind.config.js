@@ -2,12 +2,11 @@
 export default {
   darkMode: ["class"],
   content: [
-    './excalidraw-app/**/*.{ts,tsx}',
-    './packages/excalidraw/src/**/*.{ts,tsx}',
+    "./excalidraw-app/**/*.{ts,tsx}",
+    "./packages/excalidraw/src/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {},
   },
   plugins: [],
-}
-
+};

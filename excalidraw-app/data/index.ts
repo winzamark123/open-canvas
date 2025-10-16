@@ -250,7 +250,7 @@ export const loadScene = async (
   // Non-optional so we don't forget to pass it even if `undefined`.
   localDataState: ImportedDataState | undefined | null,
 ) => {
-  let data;
+  let data: ImportedDataState;
   if (id != null && privateKey != null) {
     // the private key is used to decrypt the content from the server, take
     // extra care not to leak it

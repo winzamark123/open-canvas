@@ -95,6 +95,7 @@ import DebugCanvas, {
 	loadSavedDebugState,
 } from "./components/DebugCanvas";
 import { AIComponents } from "./components/AI";
+import { ChatOverlay } from "./components/ChatOverlay";
 
 import "./index.scss";
 
@@ -153,9 +154,7 @@ const initializeScene =
 		const externalUrlMatch = window.location.hash.match(/^#url=(.*)$/);
 		const localDataState = importFromLocalStorage();
 
-		const scene: RestoredDataState & {
-			scrollToContent?: boolean;
-		} = await loadScene(null, null, localDataState);
+		const scene = await loadScene(null, null, localDataState);
 
 		if (externalUrlMatch) {
 			window.history.replaceState({}, APP_NAME, window.location.origin);
@@ -528,6 +527,7 @@ const ExcalidrawWrapper = () => {
 				</OverwriteConfirmDialog>
 				<AppFooter onChange={() => excalidrawAPI?.refresh()} />
 				{excalidrawAPI && <AIComponents excalidrawAPI={excalidrawAPI} />}
+				{excalidrawAPI && <ChatOverlay excalidrawAPI={excalidrawAPI} />}
 
 				<TTDDialogTrigger />
 				{localStorageQuotaExceeded && (
