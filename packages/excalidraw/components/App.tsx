@@ -4,7 +4,7 @@ import React, { useContext } from "react";
 import { flushSync } from "react-dom";
 import rough from "roughjs/bin/rough";
 import { nanoid } from "nanoid";
-import { Toaster } from "./ui/sonner";
+
 import { toast } from "sonner";
 import {
   clamp,
@@ -406,6 +406,8 @@ import { isMaybeMermaidDefinition } from "../mermaid";
 import { LassoTrail } from "../lasso";
 
 import { EraserTrail } from "../eraser";
+
+import { Toaster } from "./ui/sonner";
 
 import ConvertElementTypePopup, {
   getConversionTypeFromElements,
@@ -3902,7 +3904,6 @@ class App extends React.Component<AppProps, AppState> {
       type?: "success" | "error" | "warning" | "info";
     } | null,
   ) => {
-
     switch (toastConfig?.type) {
       case "success":
         toast.success(toastConfig.message, {
