@@ -1,5 +1,8 @@
+import dotenv from "dotenv";
 import express from "express";
 import ViteExpress from "vite-express";
+
+dotenv.config({ path: '.env.local' });
 
 const app = express();
 

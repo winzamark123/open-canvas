@@ -96,6 +96,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
 			// Show error toast
 			excalidrawAPI.setToast({
 				message: `Error: ${err instanceof Error ? err.message : "Failed to generate image"}`,
+				type: "error",
 			});
 		} finally {
 			setIsGenerating(false);

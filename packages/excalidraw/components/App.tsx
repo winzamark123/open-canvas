@@ -4,7 +4,8 @@ import React, { useContext } from "react";
 import { flushSync } from "react-dom";
 import rough from "roughjs/bin/rough";
 import { nanoid } from "nanoid";
-
+import { Toaster } from "./ui/sonner";
+import { toast } from "sonner";
 import {
   clamp,
   pointFrom,
@@ -429,7 +430,7 @@ import {
   isPointHittingLinkIcon,
 } from "./hyperlink/helpers";
 import { MagicIcon, copyIcon, fullscreenIcon } from "./icons";
-import { Toast } from "./Toast";
+// import { Toast } from "./Toast";
 
 import { findShapeByKey } from "./shapes";
 
@@ -610,9 +611,9 @@ class App extends React.Component<AppProps, AppState> {
    * insert to DOM before user initially scrolls to them) */
   private initializedEmbeds = new Set<ExcalidrawIframeLikeElement["id"]>();
 
-  private handleToastClose = () => {
-    this.setToast(null);
-  };
+  // private handleToastClose = () => {
+  //   this.setToast(null);
+  // };
 
   private elementsPendingErasure: ElementsPendingErasure = new Set();
 
@@ -1732,14 +1733,15 @@ class App extends React.Component<AppProps, AppState> {
                             </ElementCanvasButtons>
                           )}
 
-                        {this.state.toast !== null && (
+                        <Toaster />
+                        {/* {this.state.toast !== null && (
                           <Toast
                             message={this.state.toast.message}
                             onClose={this.handleToastClose}
                             duration={this.state.toast.duration}
                             closable={this.state.toast.closable}
                           />
-                        )}
+                        )} */}
 
                         {this.state.contextMenu && (
                           <ContextMenu
@@ -3893,13 +3895,46 @@ class App extends React.Component<AppProps, AppState> {
   };
 
   setToast = (
-    toast: {
+    toastConfig: {
       message: string;
       closable?: boolean;
       duration?: number;
+      type?: "success" | "error" | "warning" | "info";
     } | null,
   ) => {
-    this.setState({ toast });
+
+    switch (toastConfig?.type) {
+      case "success":
+        toast.success(toastConfig.message, {
+          duration: toastConfig.duration || 5000,
+          dismissible: toastConfig.closable,
+        });
+        break;
+      case "error":
+        toast.error(toastConfig.message, {
+          duration: toastConfig.duration || 5000,
+          dismissible: toastConfig.closable,
+        });
+        break;
+      case "warning":
+        toast.warning(toastConfig.message, {
+          duration: toastConfig.duration || 5000,
+          dismissible: toastConfig.closable,
+        });
+        break;
+      case "info":
+        toast.info(toastConfig.message, {
+          duration: toastConfig.duration || 5000,
+          dismissible: toastConfig.closable,
+        });
+        break;
+      default:
+        toast.info(toastConfig.message, {
+          duration: toastConfig.duration || 5000,
+          dismissible: toastConfig.closable,
+        });
+        break;
+    }
   };
 
   restoreFileFromShare = async () => {
