@@ -3,7 +3,12 @@ import { useState } from "react";
 import { newImageElement } from "@excalidraw/element";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
-import type { BinaryFileData } from "@excalidraw/element/types";
+import type { BinaryFileData } from "@excalidraw/excalidraw/types";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import Spinner from "@excalidraw/excalidraw/components/Spinner";
+import { ArrowUp } from "lucide-react";
 
 interface ChatOverlayProps {
   excalidrawAPI: ExcalidrawImperativeAPI;
@@ -27,8 +32,8 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
     // Create binary file data
     const binaryFileData: BinaryFileData = {
       id: fileId as BinaryFileData["id"],
-      dataURL: imageDataUrl,
-      mimeType: blob.type || "image/png",
+      dataURL: imageDataUrl as BinaryFileData["dataURL"],
+      mimeType: (blob.type || "image/png") as BinaryFileData["mimeType"],
       created: Date.now(),
       lastRetrieved: Date.now(),
     };
@@ -155,89 +160,22 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
                 {error}
               </div>
             )}
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <input
-                type="text"
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <Input 
+                type="text" 
+                placeholder="Ask Anything..." 
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe an image to generate..."
-                disabled={isGenerating}
-                style={{
-                  flex: 1,
-                  border: "none",
-                  outline: "none",
-                  padding: "12px 16px",
-                  borderRadius: "6px",
-                  backgroundColor: "transparent",
-                  fontSize: "16px",
-                }}
+                style={{ flex: 1 }}
               />
 
-              <button
-                type="submit"
-                disabled={!prompt.trim() || isGenerating}
-                style={{
-                  padding: "12px",
-                  borderRadius: "6px",
-                  border: "none",
-                  backgroundColor:
-                    !prompt.trim() || isGenerating ? "#9ca3af" : "#3b82f6",
-                  color: "white",
-                  cursor:
-                    !prompt.trim() || isGenerating ? "not-allowed" : "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  minWidth: "48px",
-                  minHeight: "48px",
-                }}
-              >
-                {isGenerating ? (
-                  <div
-                    style={{
-                      width: "16px",
-                      height: "16px",
-                      border: "2px solid transparent",
-                      borderTop: "2px solid white",
-                      borderRadius: "50%",
-                      animation: "spin 1s linear infinite",
-                    }}
-                  />
-                ) : (
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-label="Send message"
-                  >
-                    <title>Send message</title>
-                    <path
-                      d="M7 11L12 6L17 11M12 18V7"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      transform="rotate(45 12 12)"
-                    />
-                  </svg>
-                )}
-              </button>
+              <Button type="submit" disabled={!prompt.trim() || isGenerating} size="icon">
+                {isGenerating ? <Spinner /> : <ArrowUp />}
+              </Button>
             </div>
           </form>
         </div>
       </div>
-
-      {/* Keyframes for spinner animation */}
-      <style>
-        {`
-					@keyframes spin {
-						from { transform: rotate(0deg); }
-						to { transform: rotate(360deg); }
-					}
-				`}
-      </style>
     </div>
   );
 };
