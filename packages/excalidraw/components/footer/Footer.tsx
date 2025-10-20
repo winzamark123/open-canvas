@@ -54,7 +54,7 @@ const Footer = ({
         </Stack.Col>
       </div>
       <FooterCenterTunnel.Out />
-      <div
+      {/* <div
         className={clsx("layer-ui__wrapper__footer-right zen-mode-transition", {
           "transition-right": appState.zenModeEnabled,
         })}
@@ -65,7 +65,7 @@ const Footer = ({
             onClick={() => actionManager.executeAction(actionShortcuts)}
           />
         </div>
-      </div>
+      </div> */}
       <ExitZenModeAction
         actionManager={actionManager}
         showExitZenModeBtn={showExitZenModeBtn}

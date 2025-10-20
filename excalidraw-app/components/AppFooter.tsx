@@ -1,10 +1,19 @@
 import { Footer } from "@excalidraw/excalidraw/index";
 import React from "react";
 
+import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+
 import { DebugFooter, isVisualDebuggerEnabled } from "./DebugCanvas";
+import { ChatOverlay } from "./ChatOverlay";
 
 export const AppFooter = React.memo(
-  ({ onChange }: { onChange: () => void }) => {
+  ({
+    onChange,
+    excalidrawAPI,
+  }: {
+    onChange: () => void;
+    excalidrawAPI: ExcalidrawImperativeAPI;
+  }) => {
     return (
       <Footer>
         {isVisualDebuggerEnabled() && (
@@ -18,6 +27,7 @@ export const AppFooter = React.memo(
             <DebugFooter onChange={onChange} />
           </div>
         )}
+        <ChatOverlay excalidrawAPI={excalidrawAPI} />
       </Footer>
     );
   },

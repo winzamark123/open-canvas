@@ -21,7 +21,6 @@ app.post("/api/generate-image", async (req, res) => {
     }
 
     const apiKey = process.env.JIGSAWSTACK_API_KEY;
-    console.log("apiKey", apiKey);
     if (!apiKey) {
       return res.status(500).json({
         error: "JigsawStack API key not configured",
@@ -44,8 +43,6 @@ app.post("/api/generate-image", async (req, res) => {
       },
     );
 
-    console.log("JigsawStack API response:", response);
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error("JigsawStack API error:", errorData);
@@ -57,12 +54,6 @@ app.post("/api/generate-image", async (req, res) => {
 
     const data = await response.json();
 
-    // Log the response for debugging
-    console.log(
-      "JigsawStack API response data:",
-      JSON.stringify(data, null, 2),
-    );
-
     if (!data.success || !data.url) {
       console.error("Invalid response structure:", data);
       return res.status(500).json({
@@ -70,8 +61,6 @@ app.post("/api/generate-image", async (req, res) => {
         details: data,
       });
     }
-
-    console.log("Successfully generated image:", data.url);
 
     // Fetch the image and convert to base64 to avoid CORS issues
     const imageResponse = await fetch(data.url);

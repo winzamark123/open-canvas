@@ -3904,6 +3904,10 @@ class App extends React.Component<AppProps, AppState> {
       type?: "success" | "error" | "warning" | "info";
     } | null,
   ) => {
+    if (!toastConfig) {
+      return;
+    }
+
     switch (toastConfig?.type) {
       case "success":
         toast.success(toastConfig.message, {
@@ -3924,12 +3928,6 @@ class App extends React.Component<AppProps, AppState> {
         });
         break;
       case "info":
-        toast.info(toastConfig.message, {
-          duration: toastConfig.duration || 5000,
-          dismissible: toastConfig.closable,
-        });
-        break;
-      default:
         toast.info(toastConfig.message, {
           duration: toastConfig.duration || 5000,
           dismissible: toastConfig.closable,

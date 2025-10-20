@@ -2,13 +2,18 @@ import { useState } from "react";
 
 import { newImageElement } from "@excalidraw/element";
 
+import { Paperclip } from "lucide-react";
+
+import Spinner from "@excalidraw/excalidraw/components/Spinner";
+
+import { ArrowUp } from "lucide-react";
+
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import type { BinaryFileData } from "@excalidraw/excalidraw/types";
+
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import Spinner from "@excalidraw/excalidraw/components/Spinner";
-import { ArrowUp } from "lucide-react";
 
 interface ChatOverlayProps {
   excalidrawAPI: ExcalidrawImperativeAPI;
@@ -118,63 +123,33 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: "0",
-        left: "0",
-        right: "0",
-        zIndex: 50,
-        display: "flex",
-        justifyContent: "center",
-        padding: "16px",
-        pointerEvents: "none",
-      }}
-    >
-      <div
+    <div className="flex items-center px-8 bg-white rounded-lg flex-1 max-w-3xl">
+      <Input
+        type="text"
+        placeholder="Ask Anything..."
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        // className="border-none outline-none box-shadow-none"
+        className="flex-1"
         style={{
-          pointerEvents: "auto",
-          width: "100%",
-          maxWidth: "36rem",
+          border: "none",
+          outline: "none",
+          boxShadow: "none",
         }}
-      >
-        <div
-          style={{
-            backgroundColor: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(8px)",
-            borderRadius: "8px",
-            border: "1px solid #e5e5e5",
-            boxShadow:
-              "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-          }}
-        >
-          <form onSubmit={handleSubmit} style={{ padding: "8px" }}>
-            {error && (
-              <div
-                style={{
-                  fontSize: "14px",
-                  color: "#ef4444",
-                  padding: "0 8px 8px 8px",
-                }}
-              >
-                {error}
-              </div>
-            )}
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <Input 
-                type="text" 
-                placeholder="Ask Anything..." 
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                style={{ flex: 1 }}
-              />
+      />
 
-              <Button type="submit" disabled={!prompt.trim() || isGenerating} size="icon">
-                {isGenerating ? <Spinner /> : <ArrowUp />}
-              </Button>
-            </div>
-          </form>
+      <div className="flex justify-between">
+        <div className="flex gap-2">
+          <Button variant="outline">
+            <Paperclip className="size-4" />
+            Attach
+          </Button>
         </div>
+        {isGenerating ? (
+          <Spinner />
+        ) : (
+          <ArrowUp className="size-4" onClick={handleSubmit} />
+        )}
       </div>
     </div>
   );
