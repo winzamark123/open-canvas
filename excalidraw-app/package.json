@@ -27,6 +27,8 @@
   },
   "dependencies": {
     "@excalidraw/random-username": "1.0.0",
+    "@radix-ui/react-dropdown-menu": "2.1.16",
+    "@radix-ui/react-select": "2.2.6",
     "@sentry/browser": "9.0.1",
     "@types/express": "5.0.3",
     "callsites": "4.2.0",

@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { newImageElement } from "@excalidraw/element";
 
-import { Paperclip } from "lucide-react";
+import { Paperclip, PenLine, Text } from "lucide-react";
 
 import Spinner from "@excalidraw/excalidraw/components/Spinner";
 
@@ -13,7 +13,28 @@ import type { BinaryFileData } from "@excalidraw/excalidraw/types";
 
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import { DropdownMenu, DropdownMenuTrigger } from "./ui/dropdown-menu";
 
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+
+const modes = [
+  {
+    icon: PenLine,
+    label: "Draw",
+  },
+  {
+    icon: Text,
+    label: "Write",
+  },
+];
 interface ChatOverlayProps {
   excalidrawAPI: ExcalidrawImperativeAPI;
 }
@@ -21,6 +42,7 @@ interface ChatOverlayProps {
 export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedMode, setSelectedMode] = useState(modes[0].label);
 
   const addImageToCanvas = async (imageDataUrl: string) => {
     // Convert base64 data URL to binary data for Excalidraw
@@ -119,7 +141,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   };
 
   return (
-    <div className="flex flex-col items-center p-4 bg-white rounded-lg flex-1 max-w-3xl">
+    <div className="flex flex-col items-center p-4 bg-white rounded-lg flex-1 max-w-3xl border border-gray-300 z-100 pointer-events-auto">
       <Input
         type="text"
         placeholder="Ask Anything..."
@@ -134,19 +156,54 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
       />
 
       <div className="flex justify-between w-full flex-1 items-center">
-        <div className="flex gap-2">
-          <Button variant="ghost">
-            <Paperclip className="size-4" />
-            Attach
-          </Button>
+        <Select value={selectedMode} onValueChange={setSelectedMode}>
+          <SelectTrigger className="w-fit rounded-full !bg-transparent shadow-none">
+            <SelectValue>
+              <div className="flex items-center gap-2">
+                {modes.find((mode) => mode.label === selectedMode)?.icon &&
+                  (() => {
+                    const Icon = modes.find(
+                      (mode) => mode.label === selectedMode,
+                    )!.icon;
+                    return <Icon className="size-3" />;
+                  })()}
+                <span className="text-xs">{selectedMode}</span>
+              </div>
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectLabel>Mode</SelectLabel>
+              {modes.map((mode) => {
+                const Icon = mode.icon;
+                return (
+                  <SelectItem key={mode.label} value={mode.label}>
+                    <div className="flex items-center gap-2">
+                      <Icon className="size-4" />
+                      <span>{mode.label}</span>
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <div className="flex gap-2 items-center">
+          <Paperclip className="size-4" />
+          {isGenerating ? (
+            <Spinner className="size-4" />
+          ) : (
+            <Button
+              variant="outline"
+              onClick={handleSubmit}
+              className="rounded-full aspect-square shadow-none"
+              size="sm"
+              style={{ backgroundColor: "transparent" }}
+            >
+              <ArrowUp className="size-4" />
+            </Button>
+          )}
         </div>
-        {isGenerating ? (
-          <Spinner />
-        ) : (
-          <Button variant="ghost" onClick={handleSubmit} className="rounded-full">
-            <ArrowUp className="size-4" />
-          </Button>
-        )}
       </div>
     </div>
   );

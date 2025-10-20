@@ -1285,8 +1285,8 @@ export const UndoRedoActions = ({
   renderAction: ActionManager["renderAction"];
   className?: string;
 }) => (
-  <div className={`undo-redo-buttons ${className}`}>
-    <div className="undo-button-container">
+  <div className={`flex`}>
+    <div className="undo-button">
       <Tooltip label={t("buttons.undo")}>{renderAction("undo")}</Tooltip>
     </div>
     <div className="redo-button-container">
