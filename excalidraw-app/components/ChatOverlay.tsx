@@ -13,7 +13,6 @@ import type { BinaryFileData } from "@excalidraw/excalidraw/types";
 
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { Card } from "./ui/card";
 
 interface ChatOverlayProps {
   excalidrawAPI: ExcalidrawImperativeAPI;
@@ -22,7 +21,6 @@ interface ChatOverlayProps {
 export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const addImageToCanvas = async (imageDataUrl: string) => {
     // Convert base64 data URL to binary data for Excalidraw
@@ -85,7 +83,6 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
     }
 
     setIsGenerating(true);
-    setError(null);
 
     try {
       // Call our local API endpoint instead of external API
@@ -109,7 +106,6 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
       setPrompt("");
     } catch (err) {
       console.error("Error generating image:", err);
-      setError(err instanceof Error ? err.message : "Failed to generate image");
       // Show error toast
       excalidrawAPI.setToast({
         message: `Error: ${
@@ -123,13 +119,12 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   };
 
   return (
-    <div className="flex items-center px-8 bg-white rounded-lg flex-1 max-w-3xl">
+    <div className="flex flex-col items-center p-4 bg-white rounded-lg flex-1 max-w-3xl">
       <Input
         type="text"
         placeholder="Ask Anything..."
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        // className="border-none outline-none box-shadow-none"
         className="flex-1"
         style={{
           border: "none",
@@ -138,9 +133,9 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
         }}
       />
 
-      <div className="flex justify-between">
+      <div className="flex justify-between w-full flex-1 items-center">
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="ghost">
             <Paperclip className="size-4" />
             Attach
           </Button>
@@ -148,7 +143,9 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
         {isGenerating ? (
           <Spinner />
         ) : (
-          <ArrowUp className="size-4" onClick={handleSubmit} />
+          <Button variant="ghost" onClick={handleSubmit} className="rounded-full">
+            <ArrowUp className="size-4" />
+          </Button>
         )}
       </div>
     </div>
