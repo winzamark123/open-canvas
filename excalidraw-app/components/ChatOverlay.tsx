@@ -60,7 +60,13 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
     setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const addImageToCanvas = async (imageDataUrl: string) => {
+  const addImageToCanvas = async ({
+    imageDataUrl,
+    prompt,
+  }: {
+    imageDataUrl: string;
+    prompt: string;
+  }) => {
     // Convert base64 data URL to binary data for Excalidraw
     const response = await fetch(imageDataUrl);
     const blob = await response.blob();
@@ -101,6 +107,11 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
       height: 300,
       fileId: fileId as BinaryFileData["id"],
       scale: [1, 1],
+      customData: {
+        aiGenerated: true,
+        prompt: prompt,
+        generatedAt: Date.now(),
+      },
     });
 
     // Add the new image element to the scene
@@ -121,6 +132,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
     }
 
     setIsGenerating(true);
+    const currentPrompt = prompt.trim(); // Store prompt before clearing
 
     try {
       // Call our local API endpoint instead of external API
@@ -129,7 +141,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt: prompt.trim() }),
+        body: JSON.stringify({ prompt: currentPrompt }),
       });
 
       const data = await response.json();
@@ -138,7 +150,10 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
         throw new Error(data.error || "Failed to generate image");
       }
 
-      await addImageToCanvas(data.imageData);
+      await addImageToCanvas({
+        imageDataUrl: data.imageData,
+        prompt: currentPrompt,
+      });
 
       // Clear the input
       setPrompt("");

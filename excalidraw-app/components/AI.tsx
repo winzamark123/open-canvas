@@ -7,8 +7,146 @@ import {
 } from "@excalidraw/excalidraw";
 import { getDataURL } from "@excalidraw/excalidraw/data/blob";
 import { safelyParseJSON } from "@excalidraw/common";
+import { ElementCanvasButtons } from "@excalidraw/excalidraw/components/ElementCanvasButtons";
+import { ElementCanvasButton } from "@excalidraw/excalidraw/components/MagicButton";
+import {
+  useExcalidrawAppState,
+  useExcalidrawElements,
+} from "@excalidraw/excalidraw/components/App";
+import { isImageElement } from "@excalidraw/element";
+import { newElementWith } from "@excalidraw/element";
+import { RefreshCw } from "lucide-react";
+import { useState } from "react";
 
-import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+import type {
+  ExcalidrawImperativeAPI,
+  BinaryFileData,
+} from "@excalidraw/excalidraw/types";
+import type {
+  NonDeletedExcalidrawElement,
+  ExcalidrawImageElement,
+  ElementsMap,
+} from "@excalidraw/element/types";
+
+const ImageRegenerateButton = ({
+  excalidrawAPI,
+}: {
+  excalidrawAPI: ExcalidrawImperativeAPI;
+}) => {
+  const appState = useExcalidrawAppState();
+  const elements = useExcalidrawElements();
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
+  // Get the selected element
+  const selectedElements = elements.filter(
+    (el: NonDeletedExcalidrawElement) => appState.selectedElementIds[el.id],
+  ) as NonDeletedExcalidrawElement[];
+
+  // Only show button if exactly one image element is selected and it's AI-generated
+  if (
+    selectedElements.length !== 1 ||
+    !isImageElement(selectedElements[0]) ||
+    !selectedElements[0].customData?.aiGenerated
+  ) {
+    return null;
+  }
+
+  const imageElement = selectedElements[0];
+  const prompt = imageElement.customData?.prompt as string;
+
+  if (!prompt) {
+    return null;
+  }
+
+  const handleRegenerate = async () => {
+    if (isRegenerating) {
+      return;
+    }
+
+    setIsRegenerating(true);
+
+    try {
+      // Call the image generation API
+      const response = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to generate image");
+      }
+
+      // Convert the new image data
+      const imageDataUrl = data.imageData;
+      const blob = await (await fetch(imageDataUrl)).blob();
+      const fileId = `image_${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(2, 15)}`;
+
+      const binaryFileData: BinaryFileData = {
+        id: fileId as BinaryFileData["id"],
+        dataURL: imageDataUrl as BinaryFileData["dataURL"],
+        mimeType: (blob.type || "image/png") as BinaryFileData["mimeType"],
+        created: Date.now(),
+        lastRetrieved: Date.now(),
+      };
+
+      // Add new file
+      excalidrawAPI.addFiles([binaryFileData]);
+
+      // Update the element with the new file ID
+      const updatedElement = newElementWith(imageElement, {
+        fileId: fileId as BinaryFileData["id"],
+        customData: {
+          ...imageElement.customData,
+          generatedAt: Date.now(),
+        },
+      });
+
+      // Update the scene
+      excalidrawAPI.updateScene({
+        elements: excalidrawAPI
+          .getSceneElements()
+          .map((el) => (el.id === imageElement.id ? updatedElement : el)),
+      });
+
+      excalidrawAPI.setToast({
+        message: "Image regenerated successfully!",
+      });
+    } catch (err) {
+      console.error("Error regenerating image:", err);
+      excalidrawAPI.setToast({
+        message: `Error: ${
+          err instanceof Error ? err.message : "Failed to regenerate image"
+        }`,
+        type: "error",
+      });
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  // Get elementsMap for ElementCanvasButtons
+  const elementsMap = new Map(
+    elements.map((el: NonDeletedExcalidrawElement) => [el.id, el]),
+  ) as ElementsMap;
+
+  return (
+    <ElementCanvasButtons element={imageElement} elementsMap={elementsMap}>
+      <ElementCanvasButton
+        title="Regenerate image with same prompt"
+        icon={<RefreshCw className="size-4" />}
+        checked={false}
+        onChange={handleRegenerate}
+      />
+    </ElementCanvasButtons>
+  );
+};
 
 export const AIComponents = ({
   excalidrawAPI,
@@ -17,6 +155,7 @@ export const AIComponents = ({
 }) => {
   return (
     <>
+      <ImageRegenerateButton excalidrawAPI={excalidrawAPI} />
       <DiagramToCodePlugin
         generate={async ({ frame, children }) => {
           const appState = excalidrawAPI.getAppState();
