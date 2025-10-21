@@ -29,7 +29,7 @@ app.post("/api/generate-image", async (req, res) => {
 
     // Call fal.ai API
     const response = await fetch(
-      "https://queue.fal.run/fal-ai/flux-pro/kontext/max/text-to-image",
+      "https://fal.run/fal-ai/flux-pro/kontext/max/text-to-image",
       {
         method: "POST",
         headers: {
