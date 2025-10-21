@@ -1,5 +1,7 @@
 {
   "public": true,
+  "buildCommand": "cd excalidraw-app && vite build",
+  "devCommand": "cd excalidraw-app && vite --port $PORT",
   "headers": [
     {
       "source": "/(.*)",

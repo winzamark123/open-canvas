@@ -1,16 +1,10 @@
-import dotenv from "dotenv";
-import express from "express";
-import ViteExpress from "vite-express";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-dotenv.config();
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
-const app = express();
-
-// Middleware to parse JSON bodies
-app.use(express.json());
-
-// API Route - adapted from the old Next.js route.ts
-app.post("/api/generate-image", async (req, res) => {
   try {
     const { prompt } = req.body;
 
@@ -92,11 +86,4 @@ app.post("/api/generate-image", async (req, res) => {
       message: error instanceof Error ? error.message : "Unknown error",
     });
   }
-});
-
-// Start the server with ViteExpress
-const port = 3000;
-
-ViteExpress.listen(app, port, () => {
-  console.log(`Server is listening on port ${port}...`);
-});
+}

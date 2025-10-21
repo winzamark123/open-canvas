@@ -32,6 +32,6 @@
       "excalidraw-app/*": ["./excalidraw-app/*"]
     }
   },
-  "include": ["packages", "excalidraw-app"],
+  "include": ["packages", "excalidraw-app", "api"],
   "exclude": ["examples", "dist", "types", "tests"]
 }

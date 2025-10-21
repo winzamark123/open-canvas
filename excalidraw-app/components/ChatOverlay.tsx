@@ -13,7 +13,6 @@ import type { BinaryFileData } from "@excalidraw/excalidraw/types";
 
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { DropdownMenu, DropdownMenuTrigger } from "./ui/dropdown-menu";
 
 import {
   Select,
