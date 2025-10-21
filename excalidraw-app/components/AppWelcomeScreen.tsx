@@ -7,8 +7,8 @@ import React from "react";
 import { isExcalidrawPlusSignedUser } from "../app_constants";
 
 export const AppWelcomeScreen: React.FC<{
-  onCollabDialogOpen: () => any;
-  isCollabEnabled: boolean;
+  onCollabDialogOpen?: () => any;
+  isCollabEnabled?: boolean;
 }> = React.memo((props) => {
   const { t } = useI18n();
   let headingContent;
@@ -51,11 +51,11 @@ export const AppWelcomeScreen: React.FC<{
         <WelcomeScreen.Center.Menu>
           <WelcomeScreen.Center.MenuItemLoadScene />
           <WelcomeScreen.Center.MenuItemHelp />
-          {props.isCollabEnabled && (
+          {/* {props.isCollabEnabled && (
             <WelcomeScreen.Center.MenuItemLiveCollaborationTrigger
               onSelect={() => props.onCollabDialogOpen()}
             />
-          )}
+          )} */}
           {!isExcalidrawPlusSignedUser && (
             <WelcomeScreen.Center.MenuItemLink
               href={`${

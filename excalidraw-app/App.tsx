@@ -59,11 +59,7 @@ import type {
 import type { ResolvablePromise } from "@excalidraw/common/utils";
 
 import CustomStats from "./CustomStats";
-import {
-  Provider,
-  useAtomValue,
-  appJotaiStore,
-} from "./app-jotai";
+import { Provider, useAtomValue, appJotaiStore } from "./app-jotai";
 
 import { STORAGE_KEYS, SYNC_BROWSER_TABS_TIMEOUT } from "./app_constants";
 import { AppFooter } from "./components/AppFooter";
@@ -91,6 +87,7 @@ import DebugCanvas, {
   loadSavedDebugState,
 } from "./components/DebugCanvas";
 import { AIComponents } from "./components/AI";
+import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
 
 import "./index.scss";
 
@@ -515,7 +512,7 @@ const ExcalidrawWrapper = () => {
           setTheme={(theme) => setAppTheme(theme)}
           refresh={() => forceRefresh((prev) => !prev)}
         />
-        {/* <AppWelcomeScreen /> */}
+        <AppWelcomeScreen />
         <OverwriteConfirmDialog>
           <OverwriteConfirmDialog.Actions.ExportToImage />
           <OverwriteConfirmDialog.Actions.SaveToDisk />
