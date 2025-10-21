@@ -6,7 +6,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { prompt } = req.body;
+    const {
+      prompt,
+      image_size = "square_hd",
+      num_inference_steps = 28,
+      guidance_scale = 4.5,
+      num_images = 1,
+      enable_safety_checker = true,
+      output_format = "jpeg",
+      acceleration = "regular",
+    } = req.body;
 
     if (!prompt || typeof prompt !== "string") {
       return res.status(400).json({
@@ -22,23 +31,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Call fal.ai API
-    const response = await fetch(
-      "https://fal.run/fal-ai/flux-pro/kontext/max/text-to-image",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Key ${apiKey}`,
-        },
-        body: JSON.stringify({
-          prompt,
-          guidance_scale: 3.5,
-          num_images: 1,
-          output_format: "jpeg",
-          aspect_ratio: "1:1",
-        }),
+    const response = await fetch("https://fal.run/fal-ai/flux/krea", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Key ${apiKey}`,
       },
-    );
+      body: JSON.stringify({
+        prompt,
+        image_size,
+        num_inference_steps,
+        guidance_scale,
+        num_images,
+        enable_safety_checker,
+        output_format,
+        acceleration,
+      }),
+    });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

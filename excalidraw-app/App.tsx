@@ -86,7 +86,7 @@ import DebugCanvas, {
   isVisualDebuggerEnabled,
   loadSavedDebugState,
 } from "./components/DebugCanvas";
-import { AIComponents } from "./components/AI";
+import { ImageOverlayComponents } from "./components/ImageOverlay";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
 
 import "./index.scss";
@@ -523,7 +523,9 @@ const ExcalidrawWrapper = () => {
             excalidrawAPI={excalidrawAPI}
           />
         )}
-        {excalidrawAPI && <AIComponents excalidrawAPI={excalidrawAPI} />}
+        {excalidrawAPI && (
+          <ImageOverlayComponents excalidrawAPI={excalidrawAPI} />
+        )}
 
         <TTDDialogTrigger />
         {localStorageQuotaExceeded && (

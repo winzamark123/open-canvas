@@ -2,9 +2,7 @@ import { useState, useRef } from "react";
 
 import { newImageElement } from "@excalidraw/element";
 
-import { Paperclip, PenLine, Text, X } from "lucide-react";
-
-import Spinner from "@excalidraw/excalidraw/components/Spinner";
+import { Paperclip, PenLine, Text, X, Loader2 } from "lucide-react";
 
 import { ArrowUp } from "lucide-react";
 
@@ -269,7 +267,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
             onClick={() => fileInputRef.current?.click()}
           />
           {isGenerating ? (
-            <Spinner className="size-4" />
+            <Loader2 className="size-4 animate-spin" />
           ) : (
             <Button
               variant="outline"
