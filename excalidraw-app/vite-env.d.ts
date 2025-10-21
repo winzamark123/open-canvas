@@ -1,6 +1,8 @@
+/// <reference types="vite/client" />
 /// <reference types="vite-plugin-pwa/vanillajs" />
 /// <reference types="vite-plugin-pwa/info" />
 /// <reference types="vite-plugin-svgr/client" />
+
 interface ImportMetaEnv {
   // The port to run the dev server
   VITE_APP_PORT: string;
@@ -8,7 +10,11 @@ interface ImportMetaEnv {
   VITE_APP_BACKEND_V2_GET_URL: string;
   VITE_APP_BACKEND_V2_POST_URL: string;
 
-  // collaboration WebSocket server (https: string
+  // Library URLs (needed by packages/excalidraw)
+  VITE_APP_LIBRARY_URL: string;
+  VITE_APP_LIBRARY_BACKEND: string;
+
+  // collaboration WebSocket server
   VITE_APP_WS_SERVER_URL: string;
 
   // set this only if using the collaboration workflow we use on excalidraw.com
@@ -17,9 +23,12 @@ interface ImportMetaEnv {
 
   VITE_APP_FIREBASE_CONFIG: string;
 
-  // whether to disable live reload / HMR. Usuaully what you want to do when
+  // whether to disable live reload / HMR. Usually what you want to do when
   // debugging Service Workers.
   VITE_APP_DEV_DISABLE_LIVE_RELOAD: string;
+
+  // Disable browser prompt when leaving page
+  VITE_APP_DISABLE_PREVENT_UNLOAD: string;
 
   VITE_APP_DISABLE_SENTRY: string;
 
@@ -46,4 +55,10 @@ interface ImportMetaEnv {
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;
+}
+
+// Module declaration for font files
+declare module "*.woff2" {
+  const content: string;
+  export default content;
 }
