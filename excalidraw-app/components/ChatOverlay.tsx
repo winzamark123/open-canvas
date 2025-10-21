@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 import { newImageElement } from "@excalidraw/element";
 
-import { Paperclip, PenLine, Text } from "lucide-react";
+import { Paperclip, PenLine, Text, X } from "lucide-react";
 
 import Spinner from "@excalidraw/excalidraw/components/Spinner";
 
@@ -43,6 +43,23 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedMode, setSelectedMode] = useState(modes[0].label);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      setAttachedFiles((prev) => [...prev, ...Array.from(files)]);
+    }
+    // Reset input value to allow re-selecting same file
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const addImageToCanvas = async (imageDataUrl: string) => {
     // Convert base64 data URL to binary data for Excalidraw
@@ -126,6 +143,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
 
       // Clear the input
       setPrompt("");
+      setAttachedFiles([]);
     } catch (err) {
       console.error("Error generating image:", err);
       // Show error toast
@@ -141,12 +159,55 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   };
 
   return (
-    <div className="flex flex-col items-center p-4 bg-white rounded-lg flex-1 max-w-3xl border border-gray-300 z-100 pointer-events-auto">
+    <div className="flex flex-col items-center p-2 bg-white rounded-2xl flex-1 max-w-3xl border  z-100 pointer-events-auto">
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        style={{ display: "none" }}
+        onChange={handleFileSelect}
+      />
+      {attachedFiles.length > 0 && (
+        <div className="flex gap-2 flex-wrap w-full mb-2">
+          {attachedFiles.map((file, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs border border-gray-300"
+            >
+              <div className="flex flex-col">
+                <span className="text-gray-700 font-medium">
+                  {file.name.length > 20
+                    ? `${file.name.substring(0, 20)}...`
+                    : file.name}
+                </span>
+                <span className="text-gray-500 text-[10px]">
+                  {file.type || "unknown"}
+                </span>
+              </div>
+              <X
+                className="size-3 cursor-pointer text-gray-400 hover:text-red-500"
+                onClick={() => removeAttachment(index)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
       <Input
         type="text"
         placeholder="Ask Anything..."
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
+        onKeyDown={(e) => {
+          if (
+            e.key === "Enter" &&
+            !e.shiftKey &&
+            prompt.trim() &&
+            !isGenerating
+          ) {
+            e.preventDefault();
+            handleSubmit(e);
+          }
+        }}
         className="flex-1"
         style={{
           border: "none",
@@ -157,7 +218,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
 
       <div className="flex justify-between w-full flex-1 items-center">
         <Select value={selectedMode} onValueChange={setSelectedMode}>
-          <SelectTrigger className="w-fit rounded-full !bg-transparent shadow-none">
+          <SelectTrigger className="w-fit rounded-full shadow-none !border-black">
             <SelectValue>
               <div className="flex items-center gap-2">
                 {modes.find((mode) => mode.label === selectedMode)?.icon &&
@@ -189,16 +250,19 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
           </SelectContent>
         </Select>
         <div className="flex gap-2 items-center">
-          <Paperclip className="size-4" />
+          <Paperclip
+            className="size-4 cursor-pointer hover:text-gray-700"
+            onClick={() => fileInputRef.current?.click()}
+          />
           {isGenerating ? (
             <Spinner className="size-4" />
           ) : (
             <Button
               variant="outline"
               onClick={handleSubmit}
-              className="rounded-full aspect-square shadow-none"
+              disabled={!prompt.trim()}
+              className="rounded-full aspect-square shadow-none !bg-transparent border !border-black disabled:opacity-50 disabled:cursor-not-allowed"
               size="sm"
-              style={{ backgroundColor: "transparent" }}
             >
               <ArrowUp className="size-4" />
             </Button>

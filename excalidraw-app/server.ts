@@ -20,32 +20,35 @@ app.post("/api/generate-image", async (req, res) => {
       });
     }
 
-    const apiKey = process.env.JIGSAWSTACK_API_KEY;
+    const apiKey = process.env.FAL_API_KEY;
     if (!apiKey) {
       return res.status(500).json({
-        error: "JigsawStack API key not configured",
+        error: "fal.ai API key not configured",
       });
     }
 
-    // Call JigsawStack API
+    // Call fal.ai API
     const response = await fetch(
-      "https://api.jigsawstack.com/v1/ai/image_generation",
+      "https://fal.run/fal-ai/flux-pro/kontext/max/text-to-image",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": apiKey,
+          Authorization: `Key ${apiKey}`,
         },
         body: JSON.stringify({
           prompt,
-          return_type: "url",
+          guidance_scale: 3.5,
+          num_images: 1,
+          output_format: "jpeg",
+          aspect_ratio: "1:1",
         }),
       },
     );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error("JigsawStack API error:", errorData);
+      console.error("fal.ai API error:", errorData);
       return res.status(response.status).json({
         error: "Failed to generate image",
         details: errorData,
@@ -54,7 +57,7 @@ app.post("/api/generate-image", async (req, res) => {
 
     const data = await response.json();
 
-    if (!data.success || !data.url) {
+    if (!data.images || !data.images[0]?.url) {
       console.error("Invalid response structure:", data);
       return res.status(500).json({
         error: "Image generation failed",
@@ -62,8 +65,10 @@ app.post("/api/generate-image", async (req, res) => {
       });
     }
 
+    const imageUrl = data.images[0].url;
+
     // Fetch the image and convert to base64 to avoid CORS issues
-    const imageResponse = await fetch(data.url);
+    const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
       return res.status(500).json({
         error: "Failed to fetch generated image",
@@ -77,7 +82,8 @@ app.post("/api/generate-image", async (req, res) => {
     res.json({
       success: true,
       imageData: `data:${mimeType};base64,${base64Image}`,
-      usage: data._usage,
+      seed: data.seed,
+      timings: data.timings,
     });
   } catch (error) {
     console.error("Error generating image:", error);
