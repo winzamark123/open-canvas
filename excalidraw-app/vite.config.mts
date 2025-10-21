@@ -28,6 +28,10 @@ export default defineConfig(({ mode }) => {
 					replacement: path.resolve(__dirname, "."),
 				},
 				{
+					find: /^excalidraw-app\/(.*?)/,
+					replacement: path.resolve(__dirname, "$1"),
+				},
+				{
 					find: /^@excalidraw\/common$/,
 					replacement: path.resolve(
 						__dirname,
@@ -124,7 +128,9 @@ export default defineConfig(({ mode }) => {
 			woff2BrowserPlugin(),
 			react(),
 			checker({
-				typescript: true,
+				typescript: {
+					buildMode: true,
+				},
 				eslint:
 					envVars.VITE_APP_ENABLE_ESLINT === "false"
 						? undefined

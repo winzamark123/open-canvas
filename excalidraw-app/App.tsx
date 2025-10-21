@@ -44,7 +44,6 @@ import {
   useHandleLibrary,
 } from "@excalidraw/excalidraw/data/library";
 
-import type { RestoredDataState } from "@excalidraw/excalidraw/data/restore";
 import type {
   FileId,
   NonDeletedExcalidrawElement,
@@ -57,21 +56,18 @@ import type {
   ExcalidrawInitialDataState,
   UIAppState,
 } from "@excalidraw/excalidraw/types";
-import type { ResolutionType } from "@excalidraw/common/utility-types";
 import type { ResolvablePromise } from "@excalidraw/common/utils";
 
 import CustomStats from "./CustomStats";
 import {
   Provider,
-  useAtom,
   useAtomValue,
-  useAtomWithInitialValue,
   appJotaiStore,
 } from "./app-jotai";
+
 import { STORAGE_KEYS, SYNC_BROWSER_TABS_TIMEOUT } from "./app_constants";
 import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
-import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
 import { TopErrorBoundary } from "./components/TopErrorBoundary";
 
 import { loadScene } from "./data";
@@ -95,7 +91,6 @@ import DebugCanvas, {
   loadSavedDebugState,
 } from "./components/DebugCanvas";
 import { AIComponents } from "./components/AI";
-import { ChatOverlay } from "./components/ChatOverlay";
 
 import "./index.scss";
 
@@ -525,9 +520,13 @@ const ExcalidrawWrapper = () => {
           <OverwriteConfirmDialog.Actions.ExportToImage />
           <OverwriteConfirmDialog.Actions.SaveToDisk />
         </OverwriteConfirmDialog>
-        <AppFooter onChange={() => excalidrawAPI?.refresh()} />
+        {excalidrawAPI && (
+          <AppFooter
+            onChange={() => excalidrawAPI?.refresh()}
+            excalidrawAPI={excalidrawAPI}
+          />
+        )}
         {excalidrawAPI && <AIComponents excalidrawAPI={excalidrawAPI} />}
-        {excalidrawAPI && <ChatOverlay excalidrawAPI={excalidrawAPI} />}
 
         <TTDDialogTrigger />
         {localStorageQuotaExceeded && (

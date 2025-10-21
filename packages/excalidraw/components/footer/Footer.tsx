@@ -26,7 +26,8 @@ const Footer = ({
   return (
     <footer
       role="contentinfo"
-      className="layer-ui__wrapper__footer App-menu App-menu_bottom"
+      // className="layer-ui__wrapper__footer App-menu App-menu_bottom gap-2"
+      className="flex App-menu_bottom w-full justify-justify-evenly items-center"
     >
       <div
         className={clsx("layer-ui__wrapper__footer-left zen-mode-transition", {
@@ -35,26 +36,28 @@ const Footer = ({
         })}
       >
         <Stack.Col gap={2}>
-          <Section heading="canvasActions">
-            <ZoomActions
-              renderAction={actionManager.renderAction}
-              zoom={appState.zoom}
-            />
+          {/* <Section heading="canvasActions"> */}
+          <ZoomActions
+            renderAction={actionManager.renderAction}
+            zoom={appState.zoom}
+          />
 
-            {!appState.viewModeEnabled && (
-              <UndoRedoActions
-                renderAction={actionManager.renderAction}
-                className={clsx("zen-mode-transition", {
-                  "layer-ui__wrapper__footer-left--transition-bottom":
-                    appState.zenModeEnabled,
-                })}
-              />
-            )}
-          </Section>
+          {!appState.viewModeEnabled && (
+            <UndoRedoActions
+              renderAction={actionManager.renderAction}
+              className={clsx("zen-mode-transition", {
+                "flex gap-2":
+                  appState.zenModeEnabled,
+              })}
+            />
+          )}
+          {/* </Section> */}
         </Stack.Col>
       </div>
-      <FooterCenterTunnel.Out />
-      <div
+      <div className="w-full flex items-center justify-center pointer-events-none">
+        <FooterCenterTunnel.Out />
+      </div>
+      {/* <div
         className={clsx("layer-ui__wrapper__footer-right zen-mode-transition", {
           "transition-right": appState.zenModeEnabled,
         })}
@@ -65,7 +68,7 @@ const Footer = ({
             onClick={() => actionManager.executeAction(actionShortcuts)}
           />
         </div>
-      </div>
+      </div> */}
       <ExitZenModeAction
         actionManager={actionManager}
         showExitZenModeBtn={showExitZenModeBtn}

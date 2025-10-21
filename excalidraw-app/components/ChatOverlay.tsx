@@ -2,9 +2,39 @@ import { useState } from "react";
 
 import { newImageElement } from "@excalidraw/element";
 
-import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
-import type { BinaryFileData } from "@excalidraw/element/types";
+import { Paperclip, PenLine, Text } from "lucide-react";
 
+import Spinner from "@excalidraw/excalidraw/components/Spinner";
+
+import { ArrowUp } from "lucide-react";
+
+import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+import type { BinaryFileData } from "@excalidraw/excalidraw/types";
+
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { DropdownMenu, DropdownMenuTrigger } from "./ui/dropdown-menu";
+
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+
+const modes = [
+  {
+    icon: PenLine,
+    label: "Draw",
+  },
+  {
+    icon: Text,
+    label: "Write",
+  },
+];
 interface ChatOverlayProps {
   excalidrawAPI: ExcalidrawImperativeAPI;
 }
@@ -12,7 +42,7 @@ interface ChatOverlayProps {
 export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedMode, setSelectedMode] = useState(modes[0].label);
 
   const addImageToCanvas = async (imageDataUrl: string) => {
     // Convert base64 data URL to binary data for Excalidraw
@@ -27,8 +57,8 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
     // Create binary file data
     const binaryFileData: BinaryFileData = {
       id: fileId as BinaryFileData["id"],
-      dataURL: imageDataUrl,
-      mimeType: blob.type || "image/png",
+      dataURL: imageDataUrl as BinaryFileData["dataURL"],
+      mimeType: (blob.type || "image/png") as BinaryFileData["mimeType"],
       created: Date.now(),
       lastRetrieved: Date.now(),
     };
@@ -75,7 +105,6 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
     }
 
     setIsGenerating(true);
-    setError(null);
 
     try {
       // Call our local API endpoint instead of external API
@@ -99,7 +128,6 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
       setPrompt("");
     } catch (err) {
       console.error("Error generating image:", err);
-      setError(err instanceof Error ? err.message : "Failed to generate image");
       // Show error toast
       excalidrawAPI.setToast({
         message: `Error: ${
@@ -113,131 +141,70 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: "0",
-        left: "0",
-        right: "0",
-        zIndex: 50,
-        display: "flex",
-        justifyContent: "center",
-        padding: "16px",
-        pointerEvents: "none",
-      }}
-    >
-      <div
+    <div className="flex flex-col items-center p-4 bg-white rounded-lg flex-1 max-w-3xl border border-gray-300 z-100 pointer-events-auto">
+      <Input
+        type="text"
+        placeholder="Ask Anything..."
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        className="flex-1"
         style={{
-          pointerEvents: "auto",
-          width: "100%",
-          maxWidth: "36rem",
+          border: "none",
+          outline: "none",
+          boxShadow: "none",
         }}
-      >
-        <div
-          style={{
-            backgroundColor: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(8px)",
-            borderRadius: "8px",
-            border: "1px solid #e5e5e5",
-            boxShadow:
-              "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-          }}
-        >
-          <form onSubmit={handleSubmit} style={{ padding: "8px" }}>
-            {error && (
-              <div
-                style={{
-                  fontSize: "14px",
-                  color: "#ef4444",
-                  padding: "0 8px 8px 8px",
-                }}
-              >
-                {error}
-              </div>
-            )}
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <input
-                type="text"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe an image to generate..."
-                disabled={isGenerating}
-                style={{
-                  flex: 1,
-                  border: "none",
-                  outline: "none",
-                  padding: "12px 16px",
-                  borderRadius: "6px",
-                  backgroundColor: "transparent",
-                  fontSize: "16px",
-                }}
-              />
+      />
 
-              <button
-                type="submit"
-                disabled={!prompt.trim() || isGenerating}
-                style={{
-                  padding: "12px",
-                  borderRadius: "6px",
-                  border: "none",
-                  backgroundColor:
-                    !prompt.trim() || isGenerating ? "#9ca3af" : "#3b82f6",
-                  color: "white",
-                  cursor:
-                    !prompt.trim() || isGenerating ? "not-allowed" : "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  minWidth: "48px",
-                  minHeight: "48px",
-                }}
-              >
-                {isGenerating ? (
-                  <div
-                    style={{
-                      width: "16px",
-                      height: "16px",
-                      border: "2px solid transparent",
-                      borderTop: "2px solid white",
-                      borderRadius: "50%",
-                      animation: "spin 1s linear infinite",
-                    }}
-                  />
-                ) : (
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-label="Send message"
-                  >
-                    <title>Send message</title>
-                    <path
-                      d="M7 11L12 6L17 11M12 18V7"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      transform="rotate(45 12 12)"
-                    />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </form>
+      <div className="flex justify-between w-full flex-1 items-center">
+        <Select value={selectedMode} onValueChange={setSelectedMode}>
+          <SelectTrigger className="w-fit rounded-full !bg-transparent shadow-none">
+            <SelectValue>
+              <div className="flex items-center gap-2">
+                {modes.find((mode) => mode.label === selectedMode)?.icon &&
+                  (() => {
+                    const Icon = modes.find(
+                      (mode) => mode.label === selectedMode,
+                    )!.icon;
+                    return <Icon className="size-3" />;
+                  })()}
+                <span className="text-xs">{selectedMode}</span>
+              </div>
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectLabel>Mode</SelectLabel>
+              {modes.map((mode) => {
+                const Icon = mode.icon;
+                return (
+                  <SelectItem key={mode.label} value={mode.label}>
+                    <div className="flex items-center gap-2">
+                      <Icon className="size-4" />
+                      <span>{mode.label}</span>
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <div className="flex gap-2 items-center">
+          <Paperclip className="size-4" />
+          {isGenerating ? (
+            <Spinner className="size-4" />
+          ) : (
+            <Button
+              variant="outline"
+              onClick={handleSubmit}
+              className="rounded-full aspect-square shadow-none"
+              size="sm"
+              style={{ backgroundColor: "transparent" }}
+            >
+              <ArrowUp className="size-4" />
+            </Button>
+          )}
         </div>
       </div>
-
-      {/* Keyframes for spinner animation */}
-      <style>
-        {`
-					@keyframes spin {
-						from { transform: rotate(0deg); }
-						to { transform: rotate(360deg); }
-					}
-				`}
-      </style>
     </div>
   );
 };

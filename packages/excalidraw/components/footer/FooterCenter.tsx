@@ -8,16 +8,17 @@ import "./FooterCenter.scss";
 const FooterCenter = ({ children }: { children?: React.ReactNode }) => {
   const { FooterCenterTunnel } = useTunnels();
   const appState = useUIAppState();
+
   return (
     <FooterCenterTunnel.In>
-      <div
+      {/* <div
         className={clsx("footer-center zen-mode-transition", {
           "layer-ui__wrapper__footer-left--transition-bottom":
             appState.zenModeEnabled,
         })}
-      >
-        {children}
-      </div>
+      > */}
+      {children}
+      {/* </div> */}
     </FooterCenterTunnel.In>
   );
 };

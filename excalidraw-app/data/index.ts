@@ -32,7 +32,7 @@ import type { MakeBrand } from "@excalidraw/common/utility-types";
 
 import {
   DELETED_ELEMENT_TIMEOUT,
-  FILE_UPLOAD_MAX_BYTES,
+  // FILE_UPLOAD_MAX_BYTES,
   ROOM_ID_BYTES,
 } from "../app_constants";
 
@@ -307,11 +307,11 @@ export const exportToBackend = async (
       }
     }
 
-    const filesToUpload = await encodeFilesForUpload({
-      files: filesMap,
-      encryptionKey,
-      maxBytes: FILE_UPLOAD_MAX_BYTES,
-    });
+    // const filesToUpload = await encodeFilesForUpload({
+    //   files: filesMap,
+    //   encryptionKey,
+    //   maxBytes: FILE_UPLOAD_MAX_BYTES,
+    // });
 
     const response = await fetch(BACKEND_V2_POST, {
       method: "POST",
