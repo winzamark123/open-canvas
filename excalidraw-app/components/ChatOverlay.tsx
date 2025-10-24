@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
-import { newImageElement } from "@excalidraw/element";
+import { newImageElement, isImageElement } from "@excalidraw/element";
 
 import { Paperclip, PenLine, Text, X, Loader2 } from "lucide-react";
 
@@ -8,6 +8,7 @@ import { ArrowUp } from "lucide-react";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import type { BinaryFileData } from "@excalidraw/excalidraw/types";
+import type { FileId } from "@excalidraw/element/types";
 
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -32,6 +33,14 @@ const modes = [
     label: "Write",
   },
 ];
+
+interface AttachedCanvasImage {
+  id: string;
+  fileId: FileId;
+  dataURL: string;
+  prompt?: string;
+}
+
 interface ChatOverlayProps {
   excalidrawAPI: ExcalidrawImperativeAPI;
 }
@@ -40,13 +49,14 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedMode, setSelectedMode] = useState(modes[0].label);
-  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [canvasImages, setCanvasImages] = useState<AttachedCanvasImage[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      setAttachedFiles((prev) => [...prev, ...Array.from(files)]);
+      setUploadedFiles((prev) => [...prev, ...Array.from(files)]);
     }
     // Reset input value to allow re-selecting same file
     if (fileInputRef.current) {
@@ -54,9 +64,46 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
     }
   };
 
-  const removeAttachment = (index: number) => {
-    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+  const removeUploadedFile = (index: number) => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
   };
+
+  // Sync canvas selection with canvasImages
+  useEffect(() => {
+    if (!excalidrawAPI) {
+      return;
+    }
+
+    const unsubscribe = excalidrawAPI.onChange((elements, appState, files) => {
+      // Get selected image elements
+      const selectedImages = elements.filter(
+        (el) => isImageElement(el) && appState.selectedElementIds[el.id],
+      );
+
+      // Convert to AttachedCanvasImage format
+      const canvasImageData: AttachedCanvasImage[] = [];
+
+      for (const el of selectedImages) {
+        if (!isImageElement(el) || !el.fileId) {
+          continue;
+        }
+
+        const fileData = files[el.fileId];
+        if (fileData?.dataURL) {
+          canvasImageData.push({
+            id: el.id,
+            fileId: el.fileId,
+            dataURL: fileData.dataURL,
+            prompt: el.customData?.prompt,
+          });
+        }
+      }
+
+      setCanvasImages(canvasImageData);
+    });
+
+    return unsubscribe;
+  }, [excalidrawAPI]);
 
   const addImageToCanvas = async ({
     imageDataUrl,
@@ -154,7 +201,8 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
 
       // Clear the input
       setPrompt("");
-      setAttachedFiles([]);
+      setCanvasImages([]);
+      setUploadedFiles([]);
     } catch (err) {
       console.error("Error generating image:", err);
       // Show error toast
@@ -178,9 +226,25 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
         style={{ display: "none" }}
         onChange={handleFileSelect}
       />
-      {attachedFiles.length > 0 && (
+      {(canvasImages.length > 0 || uploadedFiles.length > 0) && (
         <div className="flex gap-2 flex-wrap w-full mb-2">
-          {attachedFiles.map((file, index) => (
+          {/* Canvas Images - auto-synced with selection */}
+          {canvasImages.map((img) => (
+            <div
+              key={img.id}
+              className="flex flex-col items-center gap-2 px-3 py-1.5 rounded-md text-xs border border-blue-300"
+            >
+              <div className="flex flex-col">
+                {img.fileId && (
+                  <span className="text-gray-700 font-medium">{img.id}</span>
+                )}
+                <span className="text-gray-500 text-[10px]">image/png</span>
+              </div>
+            </div>
+          ))}
+
+          {/* Uploaded Files - manual removal */}
+          {uploadedFiles.map((file, index) => (
             <div
               key={index}
               className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs border border-gray-300"
@@ -197,7 +261,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
               </div>
               <X
                 className="size-3 cursor-pointer text-gray-400 hover:text-red-500"
-                onClick={() => removeAttachment(index)}
+                onClick={() => removeUploadedFile(index)}
               />
             </div>
           ))}
