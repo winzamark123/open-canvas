@@ -1164,9 +1164,9 @@ export const ShapesSwitcher = ({
           );
         },
       )}
-      <div className="App-toolbar__divider" />
+      {/* <div className="App-toolbar__divider" /> */}
 
-      <DropdownMenu open={isExtraToolsMenuOpen}>
+      {/* <DropdownMenu open={isExtraToolsMenuOpen}>
         <DropdownMenu.Trigger
           className={clsx("App-toolbar__extra-tools-trigger", {
             "App-toolbar__extra-tools-trigger--selected":
@@ -1257,7 +1257,7 @@ export const ShapesSwitcher = ({
             </DropdownMenu.Item>
           )}
         </DropdownMenu.Content>
-      </DropdownMenu>
+      </DropdownMenu> */}
     </>
   );
 };
@@ -1269,13 +1269,11 @@ export const ZoomActions = ({
   renderAction: ActionManager["renderAction"];
   zoom: Zoom;
 }) => (
-  <>
-    <div className="flex gap-2">
-      {renderAction("zoomOut")}
-      {renderAction("zoomIn")}
-      {renderAction("resetZoom")}
-    </div>
-  </>
+  <div className="flex gap-2 pr-2 items-center">
+    {renderAction("zoomOut")}
+    {renderAction("zoomIn")}
+    {renderAction("resetZoom")}
+  </div>
 );
 
 export const UndoRedoActions = ({

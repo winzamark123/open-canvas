@@ -316,7 +316,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
       )}
       <div className="flex gap-2 w-full">
         <Select value={selectedMode} onValueChange={setSelectedMode}>
-          <SelectTrigger className="w-fit rounded-full shadow-none !border-black">
+          <SelectTrigger className="w-fit rounded-full shadow-none">
             <SelectValue>
               <div className="flex items-center gap-2">
                 {modes.find((mode) => mode.label === selectedMode)?.icon &&
@@ -383,7 +383,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
               variant="outline"
               onClick={handleSubmit}
               disabled={!prompt.trim()}
-              className="rounded-full aspect-square shadow-none !bg-transparent border !border-black disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-full aspect-square shadow-none !bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               size="sm"
             >
               <ArrowUp className="size-4" />

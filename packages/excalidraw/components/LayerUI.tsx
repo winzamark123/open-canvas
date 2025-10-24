@@ -296,12 +296,13 @@ const LayerUI = ({
       appState.openDialog?.name !== "elementLinkSelector";
 
     return (
-      <div className="absolute"
-      style={{
-        top: "50%",
-        left: "1rem",
-        transform: "translateY(-50%)",
-      }}
+      <div
+        className="absolute"
+        style={{
+          top: "50%",
+          left: "1rem",
+          transform: "translateY(-50%)",
+        }}
       >
         <div
           className="flex flex-start cursor-default pointer-events-none items-center w-fit"
@@ -367,7 +368,7 @@ const LayerUI = ({
                               title={t("toolBar.lock")}
                             />
 
-                            <div className="App-toolbar__divider" />
+                            {/* <div className="App-toolbar__divider" /> */}
 
                             <HandButton
                               checked={isHandToolActive(appState)}

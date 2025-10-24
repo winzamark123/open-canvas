@@ -22,39 +22,28 @@ const Footer = ({
   return (
     <footer
       role="contentinfo"
-      // className="layer-ui__wrapper__footer App-menu App-menu_bottom gap-2"
-      className="absolute bottom-2 px-4 flex w-full justify-justify-evenly items-center"
+      className="absolute bottom-2 px-4 flex w-full items-end justify-between"
       style={{
         position: "absolute",
         bottom: "0.5rem",
+        alignItems: "end",
       }}
     >
-      <div className="flex justify-start">
-        <div className="flex gap-2 rounded-md bg-white p-1">
-          <UndoRedoActions renderAction={actionManager.renderAction} />
-          {/* <Section heading="canvasActions"> */}
-          <ZoomActions
-            renderAction={actionManager.renderAction}
-            zoom={appState.zoom}
-          />
-        </div>
-        {/* </Section> */}
+      <div
+        className="flex justify-start items-center self-end gap-2 rounded-md bg-white p-1 px-2"
+        style={{
+          height: "fit-content",
+        }}
+      >
+        <UndoRedoActions renderAction={actionManager.renderAction} />
+        <ZoomActions
+          renderAction={actionManager.renderAction}
+          zoom={appState.zoom}
+        />
       </div>
       <div className="w-full flex items-center justify-center pointer-events-none">
         <FooterCenterTunnel.Out />
       </div>
-      {/* <div
-        className={clsx("layer-ui__wrapper__footer-right zen-mode-transition", {
-          "transition-right": appState.zenModeEnabled,
-        })}
-      >
-        <div style={{ position: "relative" }}>
-          {renderWelcomeScreen && <WelcomeScreenHelpHintTunnel.Out />}
-          <HelpButton
-            onClick={() => actionManager.executeAction(actionShortcuts)}
-          />
-        </div>
-      </div> */}
       <ExitZenModeAction
         actionManager={actionManager}
         showExitZenModeBtn={showExitZenModeBtn}
