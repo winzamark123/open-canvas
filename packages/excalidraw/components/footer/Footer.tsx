@@ -30,7 +30,7 @@ const Footer = ({
       }}
     >
       <div className="flex justify-start">
-        <div className="flex gap-2 rounded-md bg-white border p-1">
+        <div className="flex gap-2 rounded-md bg-white p-1">
           <UndoRedoActions renderAction={actionManager.renderAction} />
           {/* <Section heading="canvasActions"> */}
           <ZoomActions

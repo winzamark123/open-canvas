@@ -407,6 +407,83 @@ const ExcalidrawWrapper = () => {
     };
   }, [excalidrawAPI]);
 
+  // Global image analysis hook - analyzes ALL images added to canvas
+  const analyzedImagesRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!excalidrawAPI) {
+      return;
+    }
+
+    const analyzeImage = async (
+      elementId: string,
+      imageDataUrl: string,
+      api: ExcalidrawImperativeAPI,
+    ) => {
+      try {
+        const response = await fetch("/api/analyze-image", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ imageData: imageDataUrl }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          console.error("Failed to analyze image:", data.error);
+          return;
+        }
+
+        // Update the element with analysis results
+        const currentElements = api.getSceneElements();
+        const updatedElements = currentElements.map((el) => {
+          if (el.id === elementId) {
+            return newElementWith(el, {
+              customData: {
+                ...el.customData,
+                analysis: data.analysis,
+                analyzedAt: Date.now(),
+              },
+            });
+          }
+          return el;
+        });
+
+        api.updateScene({
+          elements: updatedElements,
+        });
+      } catch (err) {
+        console.error("Error analyzing image:", err);
+        // Silent fail - don't disrupt user experience
+      }
+    };
+
+    const unsubscribe = excalidrawAPI.onChange((elements, appState, files) => {
+      // Find new image elements that haven't been analyzed
+      elements.forEach((element) => {
+        if (
+          isInitializedImageElement(element) &&
+          !analyzedImagesRef.current.has(element.id) &&
+          !element.customData?.analysis
+        ) {
+          // Mark as being analyzed
+          analyzedImagesRef.current.add(element.id);
+
+          // Get image file data
+          const fileData = files[element.fileId];
+          if (fileData?.dataURL) {
+            // Analyze asynchronously
+            analyzeImage(element.id, fileData.dataURL, excalidrawAPI);
+          }
+        }
+      });
+    });
+
+    return unsubscribe;
+  }, [excalidrawAPI]);
+
   const onChange = (
     elements: readonly OrderedExcalidrawElement[],
     appState: AppState,
