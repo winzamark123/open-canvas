@@ -179,25 +179,72 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
     const currentPrompt = prompt.trim(); // Store prompt before clearing
 
     try {
-      // Call our local API endpoint instead of external API
-      const response = await fetch("/api/generate-image", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ prompt: currentPrompt }),
-      });
+      // Check if we have attached images (canvas or uploaded files)
+      const hasAttachedImages =
+        canvasImages.length > 0 || uploadedFiles.length > 0;
 
-      const data = await response.json();
+      if (hasAttachedImages) {
+        // Use edit endpoint with attached images
+        const images: any[] = [];
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Failed to generate image");
+        // Add canvas images (already as dataURLs)
+        canvasImages.forEach((img) => {
+          images.push(img.dataURL);
+        });
+
+        // Add uploaded files (convert to base64 dataURLs)
+        for (const file of uploadedFiles) {
+          const reader = new FileReader();
+          const dataURL = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          images.push(dataURL);
+        }
+
+        const response = await fetch("/api/edit-image", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt: currentPrompt,
+            images: images,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Failed to edit image");
+        }
+
+        await addImageToCanvas({
+          imageDataUrl: data.imageData,
+          prompt: currentPrompt,
+        });
+      } else {
+        // Use generate endpoint without images
+        const response = await fetch("/api/generate-image", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ prompt: currentPrompt }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Failed to generate image");
+        }
+
+        await addImageToCanvas({
+          imageDataUrl: data.imageData,
+          prompt: currentPrompt,
+        });
       }
-
-      await addImageToCanvas({
-        imageDataUrl: data.imageData,
-        prompt: currentPrompt,
-      });
 
       // Clear the input
       setPrompt("");
@@ -208,7 +255,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
       // Show error toast
       excalidrawAPI.setToast({
         message: `Error: ${
-          err instanceof Error ? err.message : "Failed to generate image"
+          err instanceof Error ? err.message : "Failed to generate/edit image"
         }`,
         type: "error",
       });

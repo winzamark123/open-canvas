@@ -9,18 +9,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const {
       prompt,
+      images,
       image_size = "square_hd",
-      num_inference_steps = 28,
-      guidance_scale = 4.5,
       num_images = 1,
+      max_images = 1,
       enable_safety_checker = true,
-      output_format = "jpeg",
-      acceleration = "regular",
     } = req.body;
 
     if (!prompt || typeof prompt !== "string") {
       return res.status(400).json({
         error: "Prompt is required and must be a string",
+      });
+    }
+
+    if (!images || !Array.isArray(images) || images.length === 0) {
+      return res.status(400).json({
+        error: "At least one image is required for editing",
       });
     }
 
@@ -36,24 +40,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       credentials: apiKey,
     });
 
-    // Call fal.ai API using client
-    const result = await fal.run("fal-ai/flux/krea", {
+    // Process images: upload files or use dataURLs directly
+    const imageUrls: string[] = [];
+
+    for (const imageData of images) {
+      if (typeof imageData === "string") {
+        // Already a dataURL or URL, use directly
+        imageUrls.push(imageData);
+      } else if (imageData.data && imageData.type) {
+        // File-like object with base64 data, convert to Blob and upload
+        const base64Data = imageData.data.split(",")[1] || imageData.data;
+        const byteCharacters = Buffer.from(base64Data, "base64");
+        const blob = new Blob([byteCharacters], { type: imageData.type });
+
+        // Upload to fal storage
+        const uploadedUrl = await fal.storage.upload(blob);
+        imageUrls.push(uploadedUrl);
+      } else {
+        console.warn("Skipping invalid image data:", imageData);
+      }
+    }
+
+    if (imageUrls.length === 0) {
+      return res.status(400).json({
+        error: "No valid images could be processed",
+      });
+    }
+
+    // Call fal.ai Seedream v4 Edit API
+    const result = await fal.run("fal-ai/bytedance/seedream/v4/edit", {
       input: {
         prompt,
+        image_urls: imageUrls,
         image_size,
-        num_inference_steps,
-        guidance_scale,
         num_images,
+        max_images,
         enable_safety_checker,
-        output_format,
-        acceleration,
       },
     });
 
     if (!result.data.images || !result.data.images[0]?.url) {
       console.error("Invalid response structure:", result.data);
       return res.status(500).json({
-        error: "Image generation failed",
+        error: "Image editing failed",
         details: result.data,
       });
     }
@@ -64,7 +93,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
       return res.status(500).json({
-        error: "Failed to fetch generated image",
+        error: "Failed to fetch edited image",
       });
     }
 
@@ -76,10 +105,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       success: true,
       imageData: `data:${mimeType};base64,${base64Image}`,
       seed: result.data.seed,
-      timings: result.data.timings,
     });
   } catch (error) {
-    console.error("Error generating image:", error);
+    console.error("Error editing image:", error);
     res.status(500).json({
       error: "Internal server error",
       message: error instanceof Error ? error.message : "Unknown error",
