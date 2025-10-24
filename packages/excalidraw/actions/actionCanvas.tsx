@@ -159,7 +159,7 @@ export const actionZoomIn = register({
   PanelComponent: ({ updateData, appState }) => (
     <ToolButton
       type="button"
-      className="zoom-in-button zoom-button"
+      className="bg-white p-2"
       icon={ZoomInIcon}
       title={`${t("buttons.zoomIn")} — ${getShortcutKey("CtrlOrCmd++")}`}
       aria-label={t("buttons.zoomIn")}
@@ -200,7 +200,7 @@ export const actionZoomOut = register({
   PanelComponent: ({ updateData, appState }) => (
     <ToolButton
       type="button"
-      className="zoom-out-button zoom-button"
+      className="bg-white p-2"
       icon={ZoomOutIcon}
       title={`${t("buttons.zoomOut")} — ${getShortcutKey("CtrlOrCmd+-")}`}
       aria-label={t("buttons.zoomOut")}
@@ -242,14 +242,16 @@ export const actionResetZoom = register({
     <Tooltip label={t("buttons.resetZoom")} style={{ height: "100%" }}>
       <ToolButton
         type="button"
-        className="reset-zoom-button zoom-button"
+        className="bg-white p-2"
         title={t("buttons.resetZoom")}
         aria-label={t("buttons.resetZoom")}
         onClick={() => {
           updateData(null);
         }}
       >
-        {(appState.zoom.value * 100).toFixed(0)}%
+        <span className="text-xs">
+          {(appState.zoom.value * 100).toFixed(0)}%
+        </span>
       </ToolButton>
     </Tooltip>
   ),

@@ -124,9 +124,9 @@ const getHints = ({
       return t("hints.disableSnapping");
     }
 
-    if (!selectedElements.length && !isMobile) {
-      return [t("hints.canvasPanning")];
-    }
+    // if (!selectedElements.length && !isMobile) {
+    //   return [t("hints.canvasPanning")];
+    // }
 
     if (selectedElements.length === 1) {
       if (isLinearElement(selectedElements[0])) {

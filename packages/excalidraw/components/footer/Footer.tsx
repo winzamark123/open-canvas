@@ -1,11 +1,7 @@
 import clsx from "clsx";
 
-import { actionShortcuts } from "../../actions";
 import { useTunnels } from "../../context/tunnels";
 import { ExitZenModeAction, UndoRedoActions, ZoomActions } from "../Actions";
-import { HelpButton } from "../HelpButton";
-import { Section } from "../Section";
-import Stack from "../Stack";
 
 import type { ActionManager } from "../../actions/manager";
 import type { UIAppState } from "../../types";
@@ -27,32 +23,22 @@ const Footer = ({
     <footer
       role="contentinfo"
       // className="layer-ui__wrapper__footer App-menu App-menu_bottom gap-2"
-      className="flex App-menu_bottom w-full justify-justify-evenly items-center"
+      className="absolute bottom-2 px-4 flex w-full justify-justify-evenly items-center border"
+      style={{
+        position: "absolute",
+        bottom: "0.5rem",
+      }}
     >
-      <div
-        className={clsx("layer-ui__wrapper__footer-left zen-mode-transition", {
-          "layer-ui__wrapper__footer-left--transition-left":
-            appState.zenModeEnabled,
-        })}
-      >
-        <Stack.Col gap={2}>
+      <div className="flex justify-start border border-red-500">
+        <div className="flex gap-2 rounded-md bg-white border p-1">
+          <UndoRedoActions renderAction={actionManager.renderAction} />
           {/* <Section heading="canvasActions"> */}
           <ZoomActions
             renderAction={actionManager.renderAction}
             zoom={appState.zoom}
           />
-
-          {!appState.viewModeEnabled && (
-            <UndoRedoActions
-              renderAction={actionManager.renderAction}
-              className={clsx("zen-mode-transition", {
-                "flex gap-2":
-                  appState.zenModeEnabled,
-              })}
-            />
-          )}
-          {/* </Section> */}
-        </Stack.Col>
+        </div>
+        {/* </Section> */}
       </div>
       <div className="w-full flex items-center justify-center pointer-events-none">
         <FooterCenterTunnel.Out />

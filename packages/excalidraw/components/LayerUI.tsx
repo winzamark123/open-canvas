@@ -108,8 +108,8 @@ const DefaultMainMenu: React.FC<{
 }> = ({ UIOptions }) => {
   return (
     <MainMenu __fallback>
-      <MainMenu.DefaultItems.LoadScene />
-      <MainMenu.DefaultItems.SaveToActiveFile />
+      {/* <MainMenu.DefaultItems.LoadScene /> */}
+      {/* <MainMenu.DefaultItems.SaveToActiveFile /> */}
       {/* FIXME we should to test for this inside the item itself */}
       {UIOptions.canvasActions.export && <MainMenu.DefaultItems.Export />}
       {/* FIXME we should to test for this inside the item itself */}
@@ -119,10 +119,10 @@ const DefaultMainMenu: React.FC<{
       <MainMenu.DefaultItems.SearchMenu />
       <MainMenu.DefaultItems.Help />
       <MainMenu.DefaultItems.ClearCanvas />
-      <MainMenu.Separator />
-      <MainMenu.Group title="Excalidraw links">
+      {/* <MainMenu.Separator /> */}
+      {/* <MainMenu.Group title="Excalidraw links">
         <MainMenu.DefaultItems.Socials />
-      </MainMenu.Group>
+      </MainMenu.Group> */}
       <MainMenu.Separator />
       <MainMenu.DefaultItems.ToggleTheme />
       <MainMenu.DefaultItems.ChangeCanvasBackground />
@@ -300,7 +300,7 @@ const LayerUI = ({
     return (
       <FixedSideContainer side="top">
         <div className="App-menu App-menu_top">
-          <Stack.Col
+          {/* <Stack.Col
             gap={spacing.menuTopGap}
             className={clsx("App-menu_top__left")}
           >
@@ -313,7 +313,7 @@ const LayerUI = ({
             >
               {shouldRenderSelectedShapeActions && renderSelectedShapeActions()}
             </div>
-          </Stack.Col>
+          </Stack.Col> */}
           {!appState.viewModeEnabled &&
             appState.openDialog?.name !== "elementLinkSelector" && (
               <Section heading="shapes" className="shapes-section">
@@ -323,7 +323,7 @@ const LayerUI = ({
                       <tunnels.WelcomeScreenToolbarHintTunnel.Out />
                     )}
                     <Stack.Col gap={spacing.toolbarColGap} align="start">
-                      <Stack.Row
+                      <Stack.Col
                         gap={spacing.toolbarRowGap}
                         className={clsx("App-toolbar-container", {
                           "zen-mode": appState.zenModeEnabled,
@@ -344,7 +344,7 @@ const LayerUI = ({
                             app={app}
                           />
                           {heading}
-                          <Stack.Row gap={spacing.toolbarInnerRowGap}>
+                          <Stack.Col gap={spacing.toolbarInnerRowGap}>
                             <PenModeButton
                               zenModeEnabled={appState.zenModeEnabled}
                               checked={appState.penMode}
@@ -373,7 +373,7 @@ const LayerUI = ({
                               UIOptions={UIOptions}
                               app={app}
                             />
-                          </Stack.Row>
+                          </Stack.Col>
                         </Island>
                         {isCollaborating && (
                           <Island
@@ -395,7 +395,7 @@ const LayerUI = ({
                             />
                           </Island>
                         )}
-                      </Stack.Row>
+                      </Stack.Col>
                     </Stack.Col>
                   </div>
                 )}
@@ -467,7 +467,7 @@ const LayerUI = ({
           tunneled away. We only render tunneled components that actually
         have defaults when host do not render anything. */}
       <DefaultMainMenu UIOptions={UIOptions} />
-      <DefaultSidebar.Trigger
+      {/* <DefaultSidebar.Trigger
         __fallback
         icon={LibraryIcon}
         title={capitalizeString(t("toolBar.library"))}
@@ -485,7 +485,7 @@ const LayerUI = ({
         {appState.stylesPanelMode === "full" &&
           appState.width >= MQ_MIN_WIDTH_DESKTOP &&
           t("toolBar.library")}
-      </DefaultSidebar.Trigger>
+      </DefaultSidebar.Trigger> */}
       <DefaultOverwriteConfirmDialog />
       {appState.openDialog?.name === "ttd" && <TTDDialog __fallback />}
       {/* ------------------------------------------------------------------ */}
@@ -627,7 +627,7 @@ const LayerUI = ({
               </button>
             )}
           </div>
-          {renderSidebars()}
+          {/* {renderSidebars()} */}
         </>
       )}
     </>

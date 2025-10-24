@@ -1269,13 +1269,13 @@ export const ZoomActions = ({
   renderAction: ActionManager["renderAction"];
   zoom: Zoom;
 }) => (
-  <Stack.Col gap={1} className={CLASSES.ZOOM_ACTIONS}>
-    <Stack.Row align="center">
+  <>
+    <div className="flex gap-2">
       {renderAction("zoomOut")}
-      {renderAction("resetZoom")}
       {renderAction("zoomIn")}
-    </Stack.Row>
-  </Stack.Col>
+      {renderAction("resetZoom")}
+    </div>
+  </>
 );
 
 export const UndoRedoActions = ({
@@ -1286,12 +1286,8 @@ export const UndoRedoActions = ({
   className?: string;
 }) => (
   <div className={`flex`}>
-    <div className="undo-button">
-      <Tooltip label={t("buttons.undo")}>{renderAction("undo")}</Tooltip>
-    </div>
-    <div className="redo-button-container">
-      <Tooltip label={t("buttons.redo")}> {renderAction("redo")}</Tooltip>
-    </div>
+    <Tooltip label={t("buttons.undo")}>{renderAction("undo")}</Tooltip>
+    <Tooltip label={t("buttons.redo")}> {renderAction("redo")}</Tooltip>
   </div>
 );
 
