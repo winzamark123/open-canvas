@@ -137,7 +137,6 @@ const duplicateImageAction = async ({
     fileId: binaryFileData.id,
     scale: [1, 1] as [number, number],
     customData: {
-      aiGenerated: true,
       prompt: prompt,
       generatedAt: Date.now(),
     },
@@ -158,14 +157,14 @@ const AI_IMAGE_BUTTON_CONFIGS: AIImageButtonConfig[] = [
   {
     icon: RefreshCw,
     function: regenerateImageAction,
-    description: "Regenerate the current image with the same prompt",
-    title: "Regenerate image with same prompt",
+    description: "Regenerate image with the same prompt",
+    title: "Regenerate image",
   },
   {
     icon: Copy,
     function: duplicateImageAction,
-    description: "Create a similar duplicate with the same prompt",
-    title: "Duplicate image with same prompt",
+    description: "Create a variation with the same prompt",
+    title: "Create variation",
   },
 ];
 
@@ -189,11 +188,7 @@ const AIImageButtons = ({
     (el: NonDeletedExcalidrawElement) => appState.selectedElementIds[el.id],
   ) as NonDeletedExcalidrawElement[];
 
-  if (
-    selectedElements.length !== 1 ||
-    !isImageElement(selectedElements[0]) ||
-    !selectedElements[0].customData?.aiGenerated
-  ) {
+  if (selectedElements.length !== 1 || !isImageElement(selectedElements[0])) {
     return null;
   }
 

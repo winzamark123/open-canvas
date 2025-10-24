@@ -443,6 +443,8 @@ const ExcalidrawWrapper = () => {
             return newElementWith(el, {
               customData: {
                 ...el.customData,
+                // Only set prompt if it doesn't already exist (ChatOverlay sets it)
+                prompt: el.customData?.prompt || data.analysis.description,
                 analysis: data.analysis,
                 analyzedAt: Date.now(),
               },

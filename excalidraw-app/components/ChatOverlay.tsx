@@ -106,7 +106,6 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
       fileId: fileId as BinaryFileData["id"],
       scale: [1, 1],
       customData: {
-        aiGenerated: true,
         prompt: prompt,
         generatedAt: Date.now(),
       },
