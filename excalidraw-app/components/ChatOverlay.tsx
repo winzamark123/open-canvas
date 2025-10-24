@@ -171,7 +171,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   };
 
   return (
-    <div className="flex flex-col items-center p-2 bg-white rounded-2xl flex-1 max-w-3xl border  z-100 pointer-events-auto">
+    <div className="flex flex-col items-center p-2 bg-white rounded-2xl flex-1 max-w-3xl shadow-md z-100 pointer-events-auto">
       <input
         ref={fileInputRef}
         type="file"
@@ -204,31 +204,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
           ))}
         </div>
       )}
-      <Input
-        type="text"
-        placeholder="Ask Anything..."
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        onKeyDown={(e) => {
-          if (
-            e.key === "Enter" &&
-            !e.shiftKey &&
-            prompt.trim() &&
-            !isGenerating
-          ) {
-            e.preventDefault();
-            handleSubmit(e);
-          }
-        }}
-        className="flex-1"
-        style={{
-          border: "none",
-          outline: "none",
-          boxShadow: "none",
-        }}
-      />
-
-      <div className="flex justify-between w-full flex-1 items-center">
+      <div className="flex gap-2 w-full">
         <Select value={selectedMode} onValueChange={setSelectedMode}>
           <SelectTrigger className="w-fit rounded-full shadow-none !border-black">
             <SelectValue>
@@ -240,7 +216,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
                     )!.icon;
                     return <Icon className="size-3" />;
                   })()}
-                <span className="text-xs">{selectedMode}</span>
+                {/* <span className="text-xs">{selectedMode}</span> */}
               </div>
             </SelectValue>
           </SelectTrigger>
@@ -261,6 +237,30 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
             </SelectGroup>
           </SelectContent>
         </Select>
+        <Input
+          type="text"
+          placeholder="Ask Anything..."
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => {
+            if (
+              e.key === "Enter" &&
+              !e.shiftKey &&
+              prompt.trim() &&
+              !isGenerating
+            ) {
+              e.preventDefault();
+              handleSubmit(e);
+            }
+          }}
+          className="flex-1"
+          style={{
+            border: "none",
+            outline: "none",
+            boxShadow: "none",
+          }}
+        />
+
         <div className="flex gap-2 items-center">
           <Paperclip
             className="size-4 cursor-pointer hover:text-gray-700"

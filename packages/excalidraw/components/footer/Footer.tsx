@@ -23,13 +23,13 @@ const Footer = ({
     <footer
       role="contentinfo"
       // className="layer-ui__wrapper__footer App-menu App-menu_bottom gap-2"
-      className="absolute bottom-2 px-4 flex w-full justify-justify-evenly items-center border"
+      className="absolute bottom-2 px-4 flex w-full justify-justify-evenly items-center"
       style={{
         position: "absolute",
         bottom: "0.5rem",
       }}
     >
-      <div className="flex justify-start border border-red-500">
+      <div className="flex justify-start">
         <div className="flex gap-2 rounded-md bg-white border p-1">
           <UndoRedoActions renderAction={actionManager.renderAction} />
           {/* <Section heading="canvasActions"> */}

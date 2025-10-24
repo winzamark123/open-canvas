@@ -55,10 +55,8 @@ import { Stats } from "./Stats";
 import ElementLinkDialog from "./ElementLinkDialog";
 import { ErrorDialog } from "./ErrorDialog";
 import { EyeDropper, activeEyeDropperAtom } from "./EyeDropper";
-import { FixedSideContainer } from "./FixedSideContainer";
 import { HandButton } from "./HandButton";
 import { HelpDialog } from "./HelpDialog";
-import { HintViewer } from "./HintViewer";
 import { ImageExportDialog } from "./ImageExportDialog";
 import { Island } from "./Island";
 import { JSONExportDialog } from "./JSONExportDialog";
@@ -298,8 +296,19 @@ const LayerUI = ({
       appState.openDialog?.name !== "elementLinkSelector";
 
     return (
-      <FixedSideContainer side="top">
-        <div className="App-menu App-menu_top">
+      <div className="absolute"
+      style={{
+        top: "50%",
+        left: "1rem",
+        transform: "translateY(-50%)",
+      }}
+      >
+        <div
+          className="flex flex-start cursor-default pointer-events-none items-center w-fit"
+          style={{
+            color: "var(--icon-fill-color)",
+          }}
+        >
           {/* <Stack.Col
             gap={spacing.menuTopGap}
             className={clsx("App-menu_top__left")}
@@ -318,7 +327,7 @@ const LayerUI = ({
             appState.openDialog?.name !== "elementLinkSelector" && (
               <Section heading="shapes" className="shapes-section">
                 {(heading: React.ReactNode) => (
-                  <div style={{ position: "relative" }}>
+                  <div className="relative">
                     {renderWelcomeScreen && (
                       <tunnels.WelcomeScreenToolbarHintTunnel.Out />
                     )}
@@ -337,12 +346,12 @@ const LayerUI = ({
                               appState.stylesPanelMode === "compact",
                           })}
                         >
-                          <HintViewer
+                          {/* <HintViewer
                             appState={appState}
                             isMobile={device.editor.isMobile}
                             device={device}
                             app={app}
-                          />
+                          /> */}
                           {heading}
                           <Stack.Col gap={spacing.toolbarInnerRowGap}>
                             <PenModeButton
@@ -436,7 +445,7 @@ const LayerUI = ({
             )}
           </div>
         </div>
-      </FixedSideContainer>
+      </div>
     );
   };
 
