@@ -211,27 +211,8 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
       centerY,
     );
 
-    // Analyze the AI-generated image using the analyze-image API
-    let analysisData = null;
-    try {
-      const analyzeResponse = await fetch("/api/analyze-image", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ imageData: imageDataUrl }),
-      });
-
-      const data = await analyzeResponse.json();
-      if (analyzeResponse.ok && data.success) {
-        analysisData = data.analysis;
-      }
-    } catch (err) {
-      console.error("Error analyzing generated image:", err);
-      // Continue without analysis data
-    }
-
     // Create image element at the calculated position
+    // Note: Image will be automatically analyzed by the global image analysis hook in App.tsx
     const imageElement = newImageElement({
       type: "image",
       x: finalX,
@@ -241,9 +222,8 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
       fileId: fileId as BinaryFileData["id"],
       scale: [1, 1],
       customData: {
-        prompt: analysisData?.description || prompt,
+        prompt: prompt,
         generatedAt: Date.now(),
-        ...(analysisData && { analysis: analysisData, analyzedAt: Date.now() }),
       },
     });
 
