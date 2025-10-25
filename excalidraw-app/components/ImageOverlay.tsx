@@ -6,7 +6,15 @@ import {
 } from "@excalidraw/excalidraw/components/App";
 import { isImageElement } from "@excalidraw/element";
 import { newElementWith, newImageElement } from "@excalidraw/element";
-import { RefreshCw, Copy, Loader2, Info, Edit, Save } from "lucide-react";
+import {
+  RefreshCw,
+  Copy,
+  Loader2,
+  Info,
+  Edit,
+  Save,
+  Shuffle,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -166,7 +174,11 @@ const ImageMetadataModal = ({
               </Button>
             </>
           ) : (
-            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditing(true)}
+            >
               <Edit className="size-4 mr-1" />
               Edit
             </Button>
@@ -283,7 +295,7 @@ const getAIImageButtonConfigs = (
     title: "Regenerate image",
   },
   {
-    icon: Copy,
+    icon: Shuffle,
     function: duplicateImageAction,
     description: "Create a variation with the same prompt",
     title: "Create variation",

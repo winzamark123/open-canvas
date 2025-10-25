@@ -556,7 +556,7 @@
   },
   "welcomeScreen": {
     "app": {
-      "center_heading": "Open Canvas brings AI to your favorite whiteboard tool. Built on top of Excalidraw.",
+      "center_heading": "Bring AI to your favorite whiteboard tool. Built on top of Excalidraw.",
       "center_heading_plus": "Did you want to go to the Excalidraw+ instead?",
       "menuHint": "Export, preferences, languages, ..."
     },

@@ -127,7 +127,7 @@
   .welcome-screen-center {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1rem;
     justify-content: center;
     align-items: center;
     position: absolute;
@@ -145,9 +145,9 @@
     font-size: 2.25rem;
 
     .welcome-screen-title {
-      font-family: "Alga", "Assistant", system-ui, -apple-system, sans-serif;
+      font-family: "Alga", "Excalifont";
       font-weight: 400;
-      font-size: 2.25rem;
+      font-size: 3rem;
       letter-spacing: -0.01em;
       color: #000000;
     }
