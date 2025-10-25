@@ -111,6 +111,14 @@ export const FONT_METADATA: Record<number, FontMetadata> = {
     },
     private: true,
   },
+  [FONT_FAMILY["Open Sans"]]: {
+    metrics: {
+      unitsPerEm: 2048,
+      ascender: 2189,
+      descender: -600,
+      lineHeight: 1.2,
+    },
+  },
   [FONT_FAMILY_FALLBACKS.Xiaolai]: {
     metrics: {
       unitsPerEm: 1000,
