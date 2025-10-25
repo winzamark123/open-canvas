@@ -379,19 +379,19 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
             className="size-4 cursor-pointer hover:text-gray-700"
             onClick={() => fileInputRef.current?.click()}
           />
-          {isGenerating ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Button
-              variant="outline"
-              onClick={handleSubmit}
-              disabled={!prompt.trim()}
-              className="rounded-full aspect-square shadow-none !bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-              size="sm"
-            >
+          <Button
+            variant="outline"
+            onClick={handleSubmit}
+            disabled={!prompt.trim()}
+            className="rounded-full aspect-square shadow-none !bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            size="sm"
+          >
+            {isGenerating ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
               <ArrowUp className="size-4" />
-            </Button>
-          )}
+            )}
+          </Button>
         </div>
       </div>
     </div>
