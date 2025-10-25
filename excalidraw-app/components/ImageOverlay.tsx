@@ -6,8 +6,15 @@ import {
 } from "@excalidraw/excalidraw/components/App";
 import { isImageElement } from "@excalidraw/element";
 import { newElementWith, newImageElement } from "@excalidraw/element";
-import { RefreshCw, Copy, Loader2 } from "lucide-react";
+import { RefreshCw, Copy, Loader2, Info } from "lucide-react";
 import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "./ui/dialog";
 
 import type {
   ExcalidrawImperativeAPI,
@@ -59,16 +66,69 @@ const createBinaryFileData = async (
 };
 
 // ============================================================================
+// Image Metadata Modal Component
+// ============================================================================
+
+const ImageMetadataModal = ({
+  imageElement,
+  open,
+  onOpenChange,
+}: {
+  imageElement: ExcalidrawImageElement;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) => {
+  const prompt = imageElement.customData?.prompt as string;
+  const generatedAt = imageElement.customData?.generatedAt as number;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Image Metadata</DialogTitle>
+          <DialogDescription>
+            Details about this AI-generated image
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <h3 className="font-semibold text-sm mb-1">Prompt</h3>
+            <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border">
+              {prompt}
+            </p>
+          </div>
+          {generatedAt && (
+            <div>
+              <h3 className="font-semibold text-sm mb-1">Generated At</h3>
+              <p className="text-sm text-gray-700">
+                {new Date(generatedAt).toLocaleString()}
+              </p>
+            </div>
+          )}
+          <div>
+            <h3 className="font-semibold text-sm mb-1">Dimensions</h3>
+            <p className="text-sm text-gray-700">
+              {Math.round(imageElement.width)} × {Math.round(imageElement.height)} px
+            </p>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// ============================================================================
 // Button Configuration Interface
 // ============================================================================
 
 interface AIImageButtonConfig {
   icon: React.ComponentType<{ className?: string }>;
-  function: (params: {
+  function?: (params: {
     imageElement: ExcalidrawImageElement;
     prompt: string;
     excalidrawAPI: ExcalidrawImperativeAPI;
   }) => Promise<void>;
+  onClick?: () => void;
   description: string;
   title: string;
 }
@@ -153,7 +213,9 @@ const duplicateImageAction = async ({
 // Button Configurations
 // ============================================================================
 
-const AI_IMAGE_BUTTON_CONFIGS: AIImageButtonConfig[] = [
+const getAIImageButtonConfigs = (
+  setShowMetadataModal: (show: boolean) => void,
+): AIImageButtonConfig[] => [
   {
     icon: RefreshCw,
     function: regenerateImageAction,
@@ -166,6 +228,12 @@ const AI_IMAGE_BUTTON_CONFIGS: AIImageButtonConfig[] = [
     description: "Create a variation with the same prompt",
     title: "Create variation",
   },
+  {
+    icon: Info,
+    onClick: () => setShowMetadataModal(true),
+    description: "View image metadata and prompt",
+    title: "View metadata",
+  },
 ];
 
 // ============================================================================
@@ -174,14 +242,13 @@ const AI_IMAGE_BUTTON_CONFIGS: AIImageButtonConfig[] = [
 
 const AIImageButtons = ({
   excalidrawAPI,
-  buttonConfigs,
 }: {
   excalidrawAPI: ExcalidrawImperativeAPI;
-  buttonConfigs: AIImageButtonConfig[];
 }) => {
   const appState = useExcalidrawAppState();
   const elements = useExcalidrawElements();
   const [activeAction, setActiveAction] = useState<string | null>(null);
+  const [showMetadataModal, setShowMetadataModal] = useState(false);
 
   // Get selected AI-generated image
   const selectedElements = elements.filter(
@@ -203,48 +270,68 @@ const AIImageButtons = ({
     elements.map((el: NonDeletedExcalidrawElement) => [el.id, el]),
   ) as ElementsMap;
 
+  const buttonConfigs = getAIImageButtonConfigs(setShowMetadataModal);
+
   return (
-    <ElementCanvasButtons element={imageElement} elementsMap={elementsMap}>
-      {buttonConfigs.map((config, index) => {
-        const Icon = config.icon;
-        const isActive = activeAction === config.title;
+    <>
+      <ElementCanvasButtons element={imageElement} elementsMap={elementsMap}>
+        {buttonConfigs.map((config, index) => {
+          const Icon = config.icon;
+          const isActive = activeAction === config.title;
 
-        return (
-          <ElementCanvasButton
-            key={index}
-            title={config.title}
-            icon={
-              isActive ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Icon className="size-4" />
-              )
-            }
-            checked={false}
-            onChange={async () => {
-              if (isActive) {
-                return;
+          return (
+            <ElementCanvasButton
+              key={index}
+              title={config.title}
+              icon={
+                isActive ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Icon className="size-4" />
+                )
               }
+              checked={false}
+              onChange={async () => {
+                if (isActive) {
+                  return;
+                }
 
-              setActiveAction(config.title);
-              try {
-                await config.function({ imageElement, prompt, excalidrawAPI });
-              } catch (err) {
-                console.error(`Error in ${config.title}:`, err);
-                excalidrawAPI.setToast({
-                  message: `Error: ${
-                    err instanceof Error ? err.message : "Operation failed"
-                  }`,
-                  type: "error",
-                });
-              } finally {
-                setActiveAction(null);
-              }
-            }}
-          />
-        );
-      })}
-    </ElementCanvasButtons>
+                if (config.onClick) {
+                  config.onClick();
+                  return;
+                }
+
+                if (config.function) {
+                  setActiveAction(config.title);
+                  try {
+                    await config.function({
+                      imageElement,
+                      prompt,
+                      excalidrawAPI,
+                    });
+                  } catch (err) {
+                    console.error(`Error in ${config.title}:`, err);
+                    excalidrawAPI.setToast({
+                      message: `Error: ${
+                        err instanceof Error ? err.message : "Operation failed"
+                      }`,
+                      type: "error",
+                    });
+                  } finally {
+                    setActiveAction(null);
+                  }
+                }
+              }}
+            />
+          );
+        })}
+      </ElementCanvasButtons>
+      <ImageMetadataModal
+        imageElement={imageElement}
+        open={showMetadataModal}
+        onOpenChange={setShowMetadataModal}
+      />
+    </>
   );
 };
 
@@ -257,10 +344,5 @@ export const ImageOverlayComponents = ({
 }: {
   excalidrawAPI: ExcalidrawImperativeAPI;
 }) => {
-  return (
-    <AIImageButtons
-      excalidrawAPI={excalidrawAPI}
-      buttonConfigs={AI_IMAGE_BUTTON_CONFIGS}
-    />
-  );
+  return <AIImageButtons excalidrawAPI={excalidrawAPI} />;
 };
