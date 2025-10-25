@@ -305,7 +305,7 @@ const LayerUI = ({
         }}
       >
         <div
-          className="flex flex-start cursor-default pointer-events-none items-center w-fit"
+          className="flex flex-start cursor-default pointer-events-none items-center w-fit rounded-2xl"
           style={{
             color: "var(--icon-fill-color)",
           }}

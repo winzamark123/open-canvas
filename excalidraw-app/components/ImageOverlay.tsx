@@ -6,15 +6,7 @@ import {
 } from "@excalidraw/excalidraw/components/App";
 import { isImageElement } from "@excalidraw/element";
 import { newElementWith, newImageElement } from "@excalidraw/element";
-import {
-  RefreshCw,
-  Copy,
-  Loader2,
-  Info,
-  Edit,
-  Save,
-  Shuffle,
-} from "lucide-react";
+import { RefreshCw, Copy, Loader2, Info, Save, Shuffle } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -89,16 +81,15 @@ const ImageMetadataModal = ({
   onOpenChange: (open: boolean) => void;
   excalidrawAPI: ExcalidrawImperativeAPI;
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedPrompt, setEditedPrompt] = useState(
-    (imageElement.customData?.prompt as string) || "",
-  );
+  const originalPrompt = (imageElement.customData?.prompt as string) || "";
+  const [editedPrompt, setEditedPrompt] = useState(originalPrompt);
 
   // Update editedPrompt when imageElement changes
   useEffect(() => {
     setEditedPrompt((imageElement.customData?.prompt as string) || "");
-    setIsEditing(false);
   }, [imageElement.id]);
+
+  const hasChanges = editedPrompt !== originalPrompt;
 
   const handleSave = () => {
     const updatedElement = newElementWith(imageElement, {
@@ -114,75 +105,50 @@ const ImageMetadataModal = ({
         .map((el) => (el.id === imageElement.id ? updatedElement : el)),
     });
 
-    setIsEditing(false);
     excalidrawAPI.setToast({ message: "Prompt updated successfully!" });
+    onOpenChange(false);
+  };
+
+  const handleCancel = () => {
+    setEditedPrompt((imageElement.customData?.prompt as string) || "");
+    onOpenChange(false);
   };
 
   return (
     <Dialog
       open={open}
       onOpenChange={(open) => {
-        onOpenChange(open);
         if (!open) {
-          setIsEditing(false);
           setEditedPrompt((imageElement.customData?.prompt as string) || "");
         }
+        onOpenChange(open);
       }}
     >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Image Metadata</DialogTitle>
-          <DialogDescription>
-            {isEditing ? "Edit the prompt" : "View and edit image metadata"}
-          </DialogDescription>
+          <DialogDescription>Edit the prompt for this image</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
             <h3 className="font-semibold text-sm mb-1">Prompt</h3>
-            {isEditing ? (
-              <textarea
-                value={editedPrompt}
-                onChange={(e) => setEditedPrompt(e.target.value)}
-                className="w-full text-sm text-gray-700 bg-gray-50 p-3 rounded border resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={4}
-              />
-            ) : (
-              <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border">
-                {editedPrompt}
-              </p>
-            )}
+            <textarea
+              value={editedPrompt}
+              onChange={(e) => setEditedPrompt(e.target.value)}
+              className="w-full text-sm text-gray-700 bg-gray-50 p-3 rounded border resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={4}
+              autoFocus
+            />
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-4">
-          {isEditing ? (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setIsEditing(false);
-                  setEditedPrompt(
-                    (imageElement.customData?.prompt as string) || "",
-                  );
-                }}
-              >
-                Cancel
-              </Button>
-              <Button size="sm" onClick={handleSave}>
-                <Save className="size-4 mr-1" />
-                Save
-              </Button>
-            </>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsEditing(true)}
-            >
-              <Edit className="size-4 mr-1" />
-              Edit
-            </Button>
-          )}
+          <Button variant="outline" size="sm" onClick={handleCancel}>
+            Cancel
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={!hasChanges}>
+            <Save className="size-4 mr-1" />
+            Save
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -281,6 +247,67 @@ const duplicateImageAction = async ({
   excalidrawAPI.setToast({ message: "Image duplicated successfully!" });
 };
 
+/**
+ * Copy the image as binary data to clipboard
+ */
+const copyImageToBinaryAction = async ({
+  imageElement,
+  excalidrawAPI,
+}: {
+  imageElement: ExcalidrawImageElement;
+  prompt: string;
+  excalidrawAPI: ExcalidrawImperativeAPI;
+}) => {
+  // Get the file data using the fileId from the image element
+  const fileId = imageElement.fileId;
+
+  if (!fileId) {
+    throw new Error("Image has no file ID");
+  }
+
+  const files = excalidrawAPI.getFiles();
+  const fileData = files[fileId];
+
+  if (!fileData) {
+    throw new Error("Image file not found");
+  }
+
+  // Convert data URL to blob
+  const blob = await (await fetch(fileData.dataURL)).blob();
+
+  // Convert to PNG if needed (for better clipboard support)
+  let pngBlob = blob;
+  if (blob.type !== "image/png") {
+    // Create an image element to convert the blob to PNG
+    const img = new Image();
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = fileData.dataURL;
+    });
+
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx?.drawImage(img, 0, 0);
+
+    pngBlob = await new Promise<Blob>((resolve) => {
+      canvas.toBlob((blob) => resolve(blob!), "image/png");
+    });
+  }
+
+  // Copy to clipboard using Clipboard API with PNG format
+  await navigator.clipboard.write([
+    new ClipboardItem({
+      "image/png": pngBlob,
+    }),
+  ]);
+
+  excalidrawAPI.setToast({ message: "Image copied to clipboard!" });
+};
+
 // ============================================================================
 // Button Configurations
 // ============================================================================
@@ -288,6 +315,12 @@ const duplicateImageAction = async ({
 const getAIImageButtonConfigs = (
   setShowMetadataModal: (show: boolean) => void,
 ): AIImageButtonConfig[] => [
+  {
+    icon: Copy,
+    function: copyImageToBinaryAction,
+    description: "Copy image as binary to clipboard",
+    title: "Copy image",
+  },
   {
     icon: RefreshCw,
     function: regenerateImageAction,

@@ -30,7 +30,7 @@ const Footer = ({
       }}
     >
       <div
-        className="flex justify-start items-center self-end gap-2 rounded-md bg-white p-1 px-2"
+        className="flex justify-start items-center self-end gap-2 rounded-2xl bg-white p-2 px-4"
         style={{
           height: "fit-content",
         }}
