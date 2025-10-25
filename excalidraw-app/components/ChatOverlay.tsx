@@ -1,13 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 
-import {
-  newImageElement,
-  isImageElement,
-  getElementBounds,
-} from "@excalidraw/element";
-import type { Bounds } from "@excalidraw/element";
-
-import { elementsOverlappingBBox } from "@excalidraw/utils/withinBounds";
+import { newImageElement, isImageElement } from "@excalidraw/element";
 
 import { Paperclip, PenLine, Text, X, Square } from "lucide-react";
 
@@ -15,7 +8,9 @@ import { ArrowUp } from "lucide-react";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import type { BinaryFileData } from "@excalidraw/excalidraw/types";
-import type { FileId } from "@excalidraw/element/types";
+import type { FileId, FractionalIndex } from "@excalidraw/element/types";
+
+import { generateNKeysBetween } from "fractional-indexing";
 
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -45,7 +40,12 @@ interface AttachedCanvasImage {
   id: string;
   fileId: FileId;
   dataURL: string;
-  prompt?: string;
+  analysis?: {
+    description: string;
+    objects: string[];
+    colors: string[];
+    style: string;
+  };
 }
 
 interface ChatOverlayProps {
@@ -102,7 +102,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
             id: el.id,
             fileId: el.fileId,
             dataURL: fileData.dataURL,
-            prompt: el.customData?.prompt,
+            analysis: el.customData?.analysis,
           });
         }
       }
@@ -115,10 +115,8 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
 
   const addImageToCanvas = async ({
     imageDataUrl,
-    prompt,
   }: {
     imageDataUrl: string;
-    prompt: string;
   }) => {
     // Convert base64 data URL to binary data for Excalidraw
     const response = await fetch(imageDataUrl);
@@ -147,69 +145,28 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
 
     // Calculate center position based on current viewport
     const centerX =
-      (appState.width / 2 - appState.scrollX) / appState.zoom.value;
+      (appState.width / 2 - appState.offsetLeft) / appState.zoom.value -
+      appState.scrollX;
     const centerY =
-      (appState.height / 2 - appState.scrollY) / appState.zoom.value;
+      (appState.height / 2 - appState.offsetTop) / appState.zoom.value -
+      appState.scrollY;
 
     // Image dimensions
     const imageWidth = 300;
     const imageHeight = 300;
-    const margin = 20; // Margin between elements
 
-    // Helper function to find a non-overlapping position
-    const findNonOverlappingPosition = (
-      startX: number,
-      startY: number,
-    ): { x: number; y: number } => {
-      let x = startX - imageWidth / 2;
-      let y = startY - imageHeight / 2;
+    // Calculate position to center the image on viewport center
+    const finalX = centerX - imageWidth / 2;
+    const finalY = centerY - imageHeight / 2;
 
-      // Get non-deleted elements
-      const nonDeletedElements = currentElements.filter((el) => !el.isDeleted);
-
-      // Check for overlaps and move right if necessary
-      let hasOverlap = true;
-      let maxAttempts = 50; // Prevent infinite loop
-      let attempts = 0;
-
-      while (hasOverlap && attempts < maxAttempts) {
-        attempts++;
-
-        // Define the bounding box for the new image
-        const imageBounds: Bounds = [x, y, x + imageWidth, y + imageHeight];
-
-        // Check if any elements overlap with this position
-        const overlappingElements = elementsOverlappingBBox({
-          elements: nonDeletedElements,
-          bounds: imageBounds,
-          type: "overlap",
-          errorMargin: margin / 2,
-        });
-
-        if (overlappingElements.length === 0) {
-          // No overlap found, we can use this position
-          hasOverlap = false;
-        } else {
-          // Find the rightmost overlapping element
-          let maxRight = -Infinity;
-          overlappingElements.forEach((el) => {
-            const [, , right] = getElementBounds(el, new Map());
-            maxRight = Math.max(maxRight, right);
-          });
-
-          // Move the image to the right of the rightmost element with margin
-          x = maxRight + margin;
-        }
-      }
-
-      return { x, y };
-    };
-
-    // Find a non-overlapping position starting from the center
-    const { x: finalX, y: finalY } = findNonOverlappingPosition(
-      centerX,
-      centerY,
-    );
+    // Generate fractional index for the new element
+    // Place it after the last element in the scene
+    const lastElement = currentElements[currentElements.length - 1];
+    const newIndex = generateNKeysBetween(
+      lastElement?.index || null,
+      null,
+      1,
+    )[0] as FractionalIndex;
 
     // Create image element at the calculated position
     // Note: Image will be automatically analyzed by the global image analysis hook in App.tsx
@@ -221,8 +178,8 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
       height: imageHeight,
       fileId: fileId as BinaryFileData["id"],
       scale: [1, 1],
+      index: newIndex,
       customData: {
-        prompt: prompt,
         generatedAt: Date.now(),
       },
     });
@@ -282,13 +239,28 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
           images.push(dataURL);
         }
 
+        // Build enhanced prompt with analysis from canvas images
+        let enhancedPrompt = currentPrompt;
+
+        // Append analysis from the first canvas image if available
+        if (canvasImages.length > 0 && canvasImages[0].analysis) {
+          const analysis = canvasImages[0].analysis;
+          enhancedPrompt += `\n\nImage context: ${analysis.description}.`;
+          if (analysis.objects && analysis.objects.length > 0) {
+            enhancedPrompt += ` Contains: ${analysis.objects.join(", ")}.`;
+          }
+          if (analysis.style) {
+            enhancedPrompt += ` Style: ${analysis.style}.`;
+          }
+        }
+
         const response = await fetch("/api/edit-image", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            prompt: currentPrompt,
+            prompt: enhancedPrompt,
             images: images,
           }),
           signal: abortControllerRef.current.signal,
@@ -302,7 +274,6 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
 
         await addImageToCanvas({
           imageDataUrl: data.imageData,
-          prompt: currentPrompt,
         });
       } else {
         // Use generate endpoint without images
@@ -323,7 +294,6 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
 
         await addImageToCanvas({
           imageDataUrl: data.imageData,
-          prompt: currentPrompt,
         });
       }
 

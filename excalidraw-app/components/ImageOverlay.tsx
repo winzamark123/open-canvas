@@ -81,21 +81,97 @@ const ImageMetadataModal = ({
   onOpenChange: (open: boolean) => void;
   excalidrawAPI: ExcalidrawImperativeAPI;
 }) => {
-  const originalPrompt = (imageElement.customData?.prompt as string) || "";
-  const [editedPrompt, setEditedPrompt] = useState(originalPrompt);
+  const analysis = imageElement.customData?.analysis as
+    | {
+        description: string;
+        objects: string[];
+        colors: string[];
+        style: string;
+      }
+    | undefined;
 
-  // Update editedPrompt when imageElement changes
+  const [editedDescription, setEditedDescription] = useState(
+    analysis?.description || "",
+  );
+  const [editedObjects, setEditedObjects] = useState(
+    analysis?.objects?.join(", ") || "",
+  );
+  const [editedColors, setEditedColors] = useState(
+    analysis?.colors?.join(", ") || "",
+  );
+  const [editedStyle, setEditedStyle] = useState(analysis?.style || "");
+
+  // Update all fields when imageElement changes
   useEffect(() => {
-    setEditedPrompt((imageElement.customData?.prompt as string) || "");
+    const newAnalysis = imageElement.customData?.analysis as typeof analysis;
+    setEditedDescription(newAnalysis?.description || "");
+    setEditedObjects(newAnalysis?.objects?.join(", ") || "");
+    setEditedColors(newAnalysis?.colors?.join(", ") || "");
+    setEditedStyle(newAnalysis?.style || "");
   }, [imageElement.id]);
 
-  const hasChanges = editedPrompt !== originalPrompt;
+  const hasChanges =
+    editedDescription !== (analysis?.description || "") ||
+    editedObjects !== (analysis?.objects?.join(", ") || "") ||
+    editedColors !== (analysis?.colors?.join(", ") || "") ||
+    editedStyle !== (analysis?.style || "");
+
+  // Field configuration for the form
+  const fields = [
+    {
+      key: "description",
+      label: "Description",
+      type: "textarea" as const,
+      value: editedDescription,
+      onChange: setEditedDescription,
+      rows: 3,
+      placeholder: "",
+    },
+    {
+      key: "objects",
+      label: "Objects",
+      type: "input" as const,
+      value: editedObjects,
+      onChange: setEditedObjects,
+      placeholder: "Comma-separated objects",
+    },
+    {
+      key: "colors",
+      label: "Colors",
+      type: "input" as const,
+      value: editedColors,
+      onChange: setEditedColors,
+      placeholder: "Comma-separated colors",
+    },
+    {
+      key: "style",
+      label: "Style",
+      type: "input" as const,
+      value: editedStyle,
+      onChange: setEditedStyle,
+      placeholder: "Visual style",
+    },
+  ];
 
   const handleSave = () => {
+    // Build updated analysis object
+    const updatedAnalysis = {
+      description: editedDescription,
+      objects: editedObjects
+        .split(",")
+        .map((o) => o.trim())
+        .filter((o) => o.length > 0),
+      colors: editedColors
+        .split(",")
+        .map((c) => c.trim())
+        .filter((c) => c.length > 0),
+      style: editedStyle,
+    };
+
     const updatedElement = newElementWith(imageElement, {
       customData: {
         ...imageElement.customData,
-        prompt: editedPrompt,
+        analysis: updatedAnalysis,
       },
     });
 
@@ -105,12 +181,17 @@ const ImageMetadataModal = ({
         .map((el) => (el.id === imageElement.id ? updatedElement : el)),
     });
 
-    excalidrawAPI.setToast({ message: "Prompt updated successfully!" });
+    excalidrawAPI.setToast({ message: "Analysis updated successfully!" });
     onOpenChange(false);
   };
 
   const handleCancel = () => {
-    setEditedPrompt((imageElement.customData?.prompt as string) || "");
+    const currentAnalysis = imageElement.customData
+      ?.analysis as typeof analysis;
+    setEditedDescription(currentAnalysis?.description || "");
+    setEditedObjects(currentAnalysis?.objects?.join(", ") || "");
+    setEditedColors(currentAnalysis?.colors?.join(", ") || "");
+    setEditedStyle(currentAnalysis?.style || "");
     onOpenChange(false);
   };
 
@@ -119,27 +200,48 @@ const ImageMetadataModal = ({
       open={open}
       onOpenChange={(open) => {
         if (!open) {
-          setEditedPrompt((imageElement.customData?.prompt as string) || "");
+          const currentAnalysis = imageElement.customData
+            ?.analysis as typeof analysis;
+          setEditedDescription(currentAnalysis?.description || "");
+          setEditedObjects(currentAnalysis?.objects?.join(", ") || "");
+          setEditedColors(currentAnalysis?.colors?.join(", ") || "");
+          setEditedStyle(currentAnalysis?.style || "");
         }
         onOpenChange(open);
       }}
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Image Metadata</DialogTitle>
-          <DialogDescription>Edit the prompt for this image</DialogDescription>
+          <DialogTitle>Image Analysis</DialogTitle>
+          <DialogDescription>
+            Edit the AI analysis for this image
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div>
-            <h3 className="font-semibold text-sm mb-1">Prompt</h3>
-            <textarea
-              value={editedPrompt}
-              onChange={(e) => setEditedPrompt(e.target.value)}
-              className="w-full text-sm text-gray-700 bg-gray-50 p-3 rounded border resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={4}
-              autoFocus
-            />
-          </div>
+          {analysis &&
+            fields.map((field) => (
+              <div key={field.key}>
+                <h3 className="font-semibold text-sm mb-1">{field.label}</h3>
+                {field.type === "textarea" ? (
+                  <textarea
+                    value={field.value}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    className="w-full text-sm text-gray-700 bg-gray-50 p-3 rounded border resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={field.rows}
+                    placeholder={field.placeholder}
+                    autoFocus={field.key === "description"}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={field.value}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    className="w-full text-sm text-gray-700 bg-gray-50 p-3 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder={field.placeholder}
+                  />
+                )}
+              </div>
+            ))}
         </div>
         <div className="flex justify-end gap-2 mt-4">
           <Button variant="outline" size="sm" onClick={handleCancel}>
@@ -163,7 +265,7 @@ interface AIImageButtonConfig {
   icon: React.ComponentType<{ className?: string }>;
   function?: (params: {
     imageElement: ExcalidrawImageElement;
-    prompt: string;
+    description: string;
     excalidrawAPI: ExcalidrawImperativeAPI;
   }) => Promise<void>;
   onClick?: () => void;
@@ -176,18 +278,18 @@ interface AIImageButtonConfig {
 // ============================================================================
 
 /**
- * Regenerate the current image with the same prompt
+ * Regenerate the current image with the same description
  */
 const regenerateImageAction = async ({
   imageElement,
-  prompt,
+  description,
   excalidrawAPI,
 }: {
   imageElement: ExcalidrawImageElement;
-  prompt: string;
+  description: string;
   excalidrawAPI: ExcalidrawImperativeAPI;
 }) => {
-  const imageDataUrl = await generateImage(prompt);
+  const imageDataUrl = await generateImage(description);
   const binaryFileData = await createBinaryFileData(imageDataUrl);
 
   excalidrawAPI.addFiles([binaryFileData]);
@@ -210,18 +312,18 @@ const regenerateImageAction = async ({
 };
 
 /**
- * Create a duplicate image with the same prompt
+ * Create a duplicate image with the same description
  */
 const duplicateImageAction = async ({
   imageElement,
-  prompt,
+  description,
   excalidrawAPI,
 }: {
   imageElement: ExcalidrawImageElement;
-  prompt: string;
+  description: string;
   excalidrawAPI: ExcalidrawImperativeAPI;
 }) => {
-  const imageDataUrl = await generateImage(prompt);
+  const imageDataUrl = await generateImage(description);
   const binaryFileData = await createBinaryFileData(imageDataUrl);
 
   excalidrawAPI.addFiles([binaryFileData]);
@@ -235,7 +337,6 @@ const duplicateImageAction = async ({
     fileId: binaryFileData.id,
     scale: [1, 1] as [number, number],
     customData: {
-      prompt: prompt,
       generatedAt: Date.now(),
     },
   });
@@ -255,7 +356,7 @@ const copyImageToBinaryAction = async ({
   excalidrawAPI,
 }: {
   imageElement: ExcalidrawImageElement;
-  prompt: string;
+  description: string;
   excalidrawAPI: ExcalidrawImperativeAPI;
 }) => {
   // Get the file data using the fileId from the image element
@@ -365,9 +466,16 @@ const AIImageButtons = ({
   }
 
   const imageElement = selectedElements[0] as ExcalidrawImageElement;
-  const prompt = imageElement.customData?.prompt as string;
+  const analysis = imageElement.customData?.analysis as
+    | {
+        description: string;
+        objects: string[];
+        colors: string[];
+        style: string;
+      }
+    | undefined;
 
-  if (!prompt) {
+  if (!analysis?.description) {
     return null;
   }
 
@@ -411,7 +519,7 @@ const AIImageButtons = ({
                   try {
                     await config.function({
                       imageElement,
-                      prompt,
+                      description: analysis.description,
                       excalidrawAPI,
                     });
                   } catch (err) {
