@@ -7,7 +7,7 @@ import {
 import { isImageElement } from "@excalidraw/element";
 import { newElementWith, newImageElement } from "@excalidraw/element";
 import { RefreshCw, Copy, Loader2, Info, Edit, Save } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -85,6 +85,12 @@ const ImageMetadataModal = ({
   const [editedPrompt, setEditedPrompt] = useState(
     (imageElement.customData?.prompt as string) || "",
   );
+
+  // Update editedPrompt when imageElement changes
+  useEffect(() => {
+    setEditedPrompt((imageElement.customData?.prompt as string) || "");
+    setIsEditing(false);
+  }, [imageElement.id]);
 
   const handleSave = () => {
     const updatedElement = newElementWith(imageElement, {
