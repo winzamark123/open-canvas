@@ -118,7 +118,7 @@ const Logo = ({ children }: { children?: React.ReactNode }) => {
             viewBox="0 0 1024 1024"
             xmlns="http://www.w3.org/2000/svg"
             className="welcome-screen-favicon"
-            style={{ width: "60px", height: "60px" }}
+            style={{ width: "100px", height: "100px" }}
           >
             <path
               fill="currentColor"
@@ -155,7 +155,7 @@ Logo.displayName = "Logo";
 
 const Heading = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="welcome-screen-center__heading welcome-screen-decor excalifont">
+    <div className="welcome-screen-center__heading welcome-screen-decor">
       {children}
     </div>
   );
