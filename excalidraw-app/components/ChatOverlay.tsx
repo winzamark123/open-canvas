@@ -212,6 +212,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
     );
 
     // Create image element at the calculated position
+    // Note: Image will be automatically analyzed by the global image analysis hook in App.tsx
     const imageElement = newImageElement({
       type: "image",
       x: finalX,

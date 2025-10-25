@@ -34,31 +34,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Call OpenAI's GPT-4o with vision capabilities using Vercel AI SDK
-    const result = await generateObject({
-      model: openai("gpt-4o"),
-      schema: imageAnalysisSchema,
-      messages: [
-        {
-          role: "user",
-          content: [
+    // Retry configuration
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY_MS = 1000; // Start with 1 second delay
+
+    let lastError: Error | null = null;
+
+    // Retry loop with exponential backoff
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        // Call OpenAI's GPT-4o with vision capabilities using Vercel AI SDK
+        const result = await generateObject({
+          model: openai("gpt-4o"),
+          schema: imageAnalysisSchema,
+          messages: [
             {
-              type: "text",
-              text: "Analyze this image and provide a basic description including: a general description, main objects/elements you see, dominant colors, and the visual style or type.",
-            },
-            {
-              type: "image",
-              image: imageData,
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Analyze this image and provide a basic description including: a general description, main objects/elements you see, dominant colors, and the visual style or type.",
+                },
+                {
+                  type: "image",
+                  image: imageData,
+                },
+              ],
             },
           ],
-        },
-      ],
-    });
+        });
 
-    res.json({
-      success: true,
-      analysis: result.object,
-    });
+        // Validate the result has reasonable content
+        if (
+          !result.object.description ||
+          result.object.description.trim().length < 5
+        ) {
+          throw new Error("Invalid or too short description from AI");
+        }
+
+        // Success! Return the result
+        return res.json({
+          success: true,
+          analysis: result.object,
+        });
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.error(`Attempt ${attempt + 1}/${MAX_RETRIES} failed:`, error);
+
+        // If this was the last attempt, don't wait
+        if (attempt < MAX_RETRIES - 1) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = RETRY_DELAY_MS * Math.pow(2, attempt);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    // All retries failed
+    throw lastError || new Error("Failed after all retry attempts");
   } catch (error) {
     console.error("Error analyzing image:", error);
     res.status(500).json({
