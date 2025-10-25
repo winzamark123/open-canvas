@@ -166,6 +166,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
     // Show success toast
     excalidrawAPI.setToast({
       message: "Image generated and added to canvas!",
+      type: "success",
     });
   };
 
@@ -253,10 +254,12 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
     } catch (err) {
       console.error("Error generating image:", err);
       // Show error toast
+      const errorMessage =
+        err instanceof Error && err.message
+          ? err.message
+          : "Failed to generate/edit image";
       excalidrawAPI.setToast({
-        message: `Error: ${
-          err instanceof Error ? err.message : "Failed to generate/edit image"
-        }`,
+        message: errorMessage,
         type: "error",
       });
     } finally {
