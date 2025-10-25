@@ -562,7 +562,7 @@
     },
     "defaults": {
       "menuHint": "Export, preferences, and more...",
-      "center_heading": "Diagrams. Made. Simple.",
+      "center_heading": "Open Canvas brings AI to your favorite whiteboard tool. Built on top of Excalidraw.",
       "toolbarHint": "Pick a tool & Start drawing!",
       "helpHint": "Shortcuts & help"
     }
