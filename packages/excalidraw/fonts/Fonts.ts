@@ -39,6 +39,7 @@ import { HelveticaFontFaces } from "./Helvetica";
 import { LiberationFontFaces } from "./Liberation";
 import { LilitaFontFaces } from "./Lilita";
 import { NunitoFontFaces } from "./Nunito";
+import { OpenSansFontFaces } from "./OpenSans";
 import { VirgilFontFaces } from "./Virgil";
 import { XiaolaiFontFaces } from "./Xiaolai";
 
@@ -374,9 +375,9 @@ export class Fonts {
         FONT_FAMILY[family as keyof typeof FONT_FAMILY] ??
         FONT_FAMILY_FALLBACKS[family as keyof typeof FONT_FAMILY_FALLBACKS];
 
-      // default to Excalifont metrics
+      // default to Open Sans metrics
       const metadata =
-        FONT_METADATA[fontFamily] ?? FONT_METADATA[FONT_FAMILY.Excalifont];
+        FONT_METADATA[fontFamily] ?? FONT_METADATA[FONT_FAMILY["Open Sans"]];
 
       Fonts.register.call(fonts, family, metadata, ...fontFacesDescriptors);
     };
@@ -390,6 +391,7 @@ export class Fonts {
     init("Liberation Sans", ...LiberationFontFaces);
     init("Lilita One", ...LilitaFontFaces);
     init("Nunito", ...NunitoFontFaces);
+    init("Open Sans", ...OpenSansFontFaces);
     init("Virgil", ...VirgilFontFaces);
 
     // fallback font faces
