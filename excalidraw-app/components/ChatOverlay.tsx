@@ -1,8 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 
-import { newImageElement, isImageElement } from "@excalidraw/element";
+import {
+  newImageElement,
+  isImageElement,
+  getElementBounds,
+} from "@excalidraw/element";
+import type { Bounds } from "@excalidraw/element";
 
-import { Paperclip, PenLine, Text, X, Loader2 } from "lucide-react";
+import { elementsOverlappingBBox } from "@excalidraw/utils/withinBounds";
+
+import { Paperclip, PenLine, Text, X, Square } from "lucide-react";
 
 import { ArrowUp } from "lucide-react";
 
@@ -52,6 +59,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   const [canvasImages, setCanvasImages] = useState<AttachedCanvasImage[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -143,13 +151,73 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
     const centerY =
       (appState.height / 2 - appState.scrollY) / appState.zoom.value;
 
-    // Create image element (positioned at center, size will be determined by the actual image)
+    // Image dimensions
+    const imageWidth = 300;
+    const imageHeight = 300;
+    const margin = 20; // Margin between elements
+
+    // Helper function to find a non-overlapping position
+    const findNonOverlappingPosition = (
+      startX: number,
+      startY: number,
+    ): { x: number; y: number } => {
+      let x = startX - imageWidth / 2;
+      let y = startY - imageHeight / 2;
+
+      // Get non-deleted elements
+      const nonDeletedElements = currentElements.filter((el) => !el.isDeleted);
+
+      // Check for overlaps and move right if necessary
+      let hasOverlap = true;
+      let maxAttempts = 50; // Prevent infinite loop
+      let attempts = 0;
+
+      while (hasOverlap && attempts < maxAttempts) {
+        attempts++;
+
+        // Define the bounding box for the new image
+        const imageBounds: Bounds = [x, y, x + imageWidth, y + imageHeight];
+
+        // Check if any elements overlap with this position
+        const overlappingElements = elementsOverlappingBBox({
+          elements: nonDeletedElements,
+          bounds: imageBounds,
+          type: "overlap",
+          errorMargin: margin / 2,
+        });
+
+        if (overlappingElements.length === 0) {
+          // No overlap found, we can use this position
+          hasOverlap = false;
+        } else {
+          // Find the rightmost overlapping element
+          let maxRight = -Infinity;
+          overlappingElements.forEach((el) => {
+            const [, , right] = getElementBounds(el, new Map());
+            maxRight = Math.max(maxRight, right);
+          });
+
+          // Move the image to the right of the rightmost element with margin
+          x = maxRight + margin;
+        }
+      }
+
+      return { x, y };
+    };
+
+    // Find a non-overlapping position starting from the center
+    const { x: finalX, y: finalY } = findNonOverlappingPosition(
+      centerX,
+      centerY,
+    );
+
+    // Create image element at the calculated position
     const imageElement = newImageElement({
       type: "image",
-      x: centerX - 150, // Offset to center the image (assuming ~300px width)
-      y: centerY - 150, // Offset to center the image (assuming ~300px height)
-      width: 300,
-      height: 300,
+      x: finalX,
+      y: finalY,
+      width: imageWidth,
+      height: imageHeight,
       fileId: fileId as BinaryFileData["id"],
       scale: [1, 1],
       customData: {
@@ -170,6 +238,12 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
     });
   };
 
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim() || isGenerating) {
@@ -178,6 +252,9 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
 
     setIsGenerating(true);
     const currentPrompt = prompt.trim(); // Store prompt before clearing
+
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
 
     try {
       // Check if we have attached images (canvas or uploaded files)
@@ -213,6 +290,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
             prompt: currentPrompt,
             images: images,
           }),
+          signal: abortControllerRef.current.signal,
         });
 
         const data = await response.json();
@@ -233,6 +311,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ prompt: currentPrompt }),
+          signal: abortControllerRef.current.signal,
         });
 
         const data = await response.json();
@@ -252,6 +331,16 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
       setCanvasImages([]);
       setUploadedFiles([]);
     } catch (err) {
+      // Handle abort separately - don't show error for user cancellation
+      if (err instanceof Error && err.name === "AbortError") {
+        console.log("Request cancelled by user");
+        excalidrawAPI.setToast({
+          message: "Request cancelled",
+          type: "info",
+        });
+        return;
+      }
+
       console.error("Error generating image:", err);
       // Show error toast
       const errorMessage =
@@ -264,6 +353,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
       });
     } finally {
       setIsGenerating(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -276,8 +366,21 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
         style={{ display: "none" }}
         onChange={handleFileSelect}
       />
-      {(canvasImages.length > 0 || uploadedFiles.length > 0) && (
-        <div className="flex gap-2 flex-wrap w-full mb-2">
+      <div
+        className="w-full overflow-hidden transition-all duration-300 ease-in-out"
+        style={{
+          maxHeight:
+            canvasImages.length > 0 || uploadedFiles.length > 0
+              ? "500px"
+              : "0px",
+          opacity: canvasImages.length > 0 || uploadedFiles.length > 0 ? 1 : 0,
+          marginBottom:
+            canvasImages.length > 0 || uploadedFiles.length > 0
+              ? "0.5rem"
+              : "0px",
+        }}
+      >
+        <div className="flex gap-2 flex-wrap w-full">
           {/* Canvas Images - auto-synced with selection */}
           {canvasImages.map((img) => (
             <div
@@ -316,19 +419,27 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
             </div>
           ))}
         </div>
-      )}
+      </div>
       <div className="flex gap-2 w-full">
-        <Select value={selectedMode} onValueChange={setSelectedMode}>
+        <Select
+          value={selectedMode}
+          onValueChange={setSelectedMode}
+          disabled={isGenerating}
+        >
           <SelectTrigger className="w-fit rounded-full shadow-none">
             <SelectValue>
               <div className="flex items-center gap-2">
-                {modes.find((mode) => mode.label === selectedMode)?.icon &&
+                {isGenerating ? (
+                  <div className="animate-spin size-3 border border-gray-400 border-t-transparent rounded-full" />
+                ) : (
+                  modes.find((mode) => mode.label === selectedMode)?.icon &&
                   (() => {
                     const Icon = modes.find(
                       (mode) => mode.label === selectedMode,
                     )!.icon;
                     return <Icon className="size-3" />;
-                  })()}
+                  })()
+                )}
                 {/* <span className="text-xs">{selectedMode}</span> */}
               </div>
             </SelectValue>
@@ -366,6 +477,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
               handleSubmit(e);
             }
           }}
+          disabled={isGenerating}
           className="flex-1"
           style={{
             border: "none",
@@ -379,19 +491,19 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
             className="size-4 cursor-pointer hover:text-gray-700"
             onClick={() => fileInputRef.current?.click()}
           />
-          {isGenerating ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Button
-              variant="outline"
-              onClick={handleSubmit}
-              disabled={!prompt.trim()}
-              className="rounded-full aspect-square shadow-none !bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-              size="sm"
-            >
+          <Button
+            variant="outline"
+            onClick={isGenerating ? handleStop : handleSubmit}
+            disabled={!isGenerating && !prompt.trim()}
+            size="sm"
+            className="rounded-full aspect-square shadow-none !bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGenerating ? (
+              <Square className="size-3" />
+            ) : (
               <ArrowUp className="size-4" />
-            </Button>
-          )}
+            )}
+          </Button>
         </div>
       </div>
     </div>
