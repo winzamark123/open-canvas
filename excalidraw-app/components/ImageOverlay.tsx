@@ -6,7 +6,7 @@ import {
 } from "@excalidraw/excalidraw/components/App";
 import { isImageElement } from "@excalidraw/element";
 import { newElementWith, newImageElement } from "@excalidraw/element";
-import { RefreshCw, Copy, Loader2, Info } from "lucide-react";
+import { RefreshCw, Copy, Loader2, Info, Edit, Save } from "lucide-react";
 import { useState } from "react";
 import {
   Dialog,
@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "./ui/dialog";
+import { Button } from "./ui/button";
 
 import type {
   ExcalidrawImperativeAPI,
@@ -73,44 +74,97 @@ const ImageMetadataModal = ({
   imageElement,
   open,
   onOpenChange,
+  excalidrawAPI,
 }: {
   imageElement: ExcalidrawImageElement;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  excalidrawAPI: ExcalidrawImperativeAPI;
 }) => {
-  const prompt = imageElement.customData?.prompt as string;
-  const generatedAt = imageElement.customData?.generatedAt as number;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedPrompt, setEditedPrompt] = useState(
+    (imageElement.customData?.prompt as string) || "",
+  );
+
+  const handleSave = () => {
+    const updatedElement = newElementWith(imageElement, {
+      customData: {
+        ...imageElement.customData,
+        prompt: editedPrompt,
+      },
+    });
+
+    excalidrawAPI.updateScene({
+      elements: excalidrawAPI
+        .getSceneElements()
+        .map((el) => (el.id === imageElement.id ? updatedElement : el)),
+    });
+
+    setIsEditing(false);
+    excalidrawAPI.setToast({ message: "Prompt updated successfully!" });
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(open) => {
+        onOpenChange(open);
+        if (!open) {
+          setIsEditing(false);
+          setEditedPrompt((imageElement.customData?.prompt as string) || "");
+        }
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Image Metadata</DialogTitle>
           <DialogDescription>
-            Details about this AI-generated image
+            {isEditing ? "Edit the prompt" : "View and edit image metadata"}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
             <h3 className="font-semibold text-sm mb-1">Prompt</h3>
-            <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border">
-              {prompt}
-            </p>
-          </div>
-          {generatedAt && (
-            <div>
-              <h3 className="font-semibold text-sm mb-1">Generated At</h3>
-              <p className="text-sm text-gray-700">
-                {new Date(generatedAt).toLocaleString()}
+            {isEditing ? (
+              <textarea
+                value={editedPrompt}
+                onChange={(e) => setEditedPrompt(e.target.value)}
+                className="w-full text-sm text-gray-700 bg-gray-50 p-3 rounded border resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={4}
+              />
+            ) : (
+              <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border">
+                {editedPrompt}
               </p>
-            </div>
-          )}
-          <div>
-            <h3 className="font-semibold text-sm mb-1">Dimensions</h3>
-            <p className="text-sm text-gray-700">
-              {Math.round(imageElement.width)} × {Math.round(imageElement.height)} px
-            </p>
+            )}
           </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-4">
+          {isEditing ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditedPrompt(
+                    (imageElement.customData?.prompt as string) || "",
+                  );
+                }}
+              >
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleSave}>
+                <Save className="size-4 mr-1" />
+                Save
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+              <Edit className="size-4 mr-1" />
+              Edit
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -330,6 +384,7 @@ const AIImageButtons = ({
         imageElement={imageElement}
         open={showMetadataModal}
         onOpenChange={setShowMetadataModal}
+        excalidrawAPI={excalidrawAPI}
       />
     </>
   );
