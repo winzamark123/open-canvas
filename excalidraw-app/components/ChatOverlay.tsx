@@ -14,6 +14,14 @@ import { generateNKeysBetween } from "fractional-indexing";
 
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import { isExcalidrawPlusSignedUser } from "../app_constants";
+import {
+  getGuestImageCount,
+  incrementGuestImageCount,
+  hasGuestReachedLimit,
+  getGuestRemainingGenerations,
+  GUEST_IMAGE_GENERATION_LIMIT,
+} from "../utils/guestImageLimits";
 
 import {
   Select,
@@ -60,6 +68,10 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [guestImageCount, setGuestImageCount] = useState(() => getGuestImageCount());
+  
+  // Check if user is logged in
+  const isLoggedIn = isExcalidrawPlusSignedUser;
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -189,11 +201,13 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
       elements: [...currentElements, imageElement],
     });
 
-    // Show success toast
-    excalidrawAPI.setToast({
-      message: "Image generated and added to canvas!",
-      type: "success",
-    });
+    // Show success toast (only if logged in - guest users get custom message with count)
+    if (isLoggedIn) {
+      excalidrawAPI.setToast({
+        message: "Image generated and added to canvas!",
+        type: "success",
+      });
+    }
   };
 
   const handleStop = () => {
@@ -205,6 +219,15 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim() || isGenerating) {
+      return;
+    }
+
+    // Check guest limits before proceeding (only for non-logged-in users)
+    if (!isLoggedIn && hasGuestReachedLimit()) {
+      excalidrawAPI.setToast({
+        message: `You've reached the limit of ${GUEST_IMAGE_GENERATION_LIMIT} image generations. Please sign up to continue generating images.`,
+        type: "error",
+      });
       return;
     }
 
@@ -275,6 +298,20 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
         await addImageToCanvas({
           imageDataUrl: data.imageData,
         });
+        
+        // Increment guest count if not logged in
+        if (!isLoggedIn) {
+          const newCount = incrementGuestImageCount();
+          setGuestImageCount(newCount);
+          
+          const remaining = getGuestRemainingGenerations();
+          if (remaining > 0) {
+            excalidrawAPI.setToast({
+              message: `Image generated successfully! You have ${remaining} generation${remaining === 1 ? '' : 's'} remaining.`,
+              type: "success",
+            });
+          }
+        }
       } else {
         // Use generate endpoint without images
         const response = await fetch("/api/generate-image", {
@@ -295,6 +332,20 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
         await addImageToCanvas({
           imageDataUrl: data.imageData,
         });
+        
+        // Increment guest count if not logged in
+        if (!isLoggedIn) {
+          const newCount = incrementGuestImageCount();
+          setGuestImageCount(newCount);
+          
+          const remaining = getGuestRemainingGenerations();
+          if (remaining > 0) {
+            excalidrawAPI.setToast({
+              message: `Image generated successfully! You have ${remaining} generation${remaining === 1 ? '' : 's'} remaining.`,
+              type: "success",
+            });
+          }
+        }
       }
 
       // Clear the input
@@ -434,7 +485,13 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
         </Select>
         <Input
           type="text"
-          placeholder="Ask Anything..."
+          placeholder={
+            !isLoggedIn && hasGuestReachedLimit()
+              ? "Upgrade to continue generating images..."
+              : !isLoggedIn
+              ? `Ask Anything... (${getGuestRemainingGenerations()} generations left)`
+              : "Ask Anything..."
+          }
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => {
@@ -448,7 +505,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
               handleSubmit(e);
             }
           }}
-          disabled={isGenerating}
+          disabled={isGenerating || (!isLoggedIn && hasGuestReachedLimit())}
           className="flex-1"
           style={{
             border: "none",
@@ -465,7 +522,10 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
           <Button
             variant="outline"
             onClick={isGenerating ? handleStop : handleSubmit}
-            disabled={!isGenerating && !prompt.trim()}
+            disabled={
+              (!isGenerating && !prompt.trim()) ||
+              (!isLoggedIn && hasGuestReachedLimit())
+            }
             size="sm"
             className="rounded-full aspect-square shadow-none !bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
           >
