@@ -56,6 +56,7 @@ import ElementLinkDialog from "./ElementLinkDialog";
 import { ErrorDialog } from "./ErrorDialog";
 import { EyeDropper, activeEyeDropperAtom } from "./EyeDropper";
 import { HandButton } from "./HandButton";
+import { RecenterButton } from "./RecenterButton";
 import { HelpDialog } from "./HelpDialog";
 import { ImageExportDialog } from "./ImageExportDialog";
 import { Island } from "./Island";
@@ -375,6 +376,15 @@ const LayerUI = ({
                               onChange={() => onHandToolToggle()}
                               title={t("toolBar.hand")}
                               isMobile
+                            />
+
+                            <RecenterButton
+                              onClick={() => {
+                                setAppState((appState) => ({
+                                  ...calculateScrollCenter(elements, appState),
+                                }));
+                              }}
+                              title="Recenter canvas"
                             />
 
                             <ShapesSwitcher
