@@ -35,7 +35,6 @@ import {
   CompactShapeActions,
 } from "./Actions";
 import { LoadingMessage } from "./LoadingMessage";
-import { LockButton } from "./LockButton";
 import { MobileMenu } from "./MobileMenu";
 import { PasteChartDialog } from "./PasteChartDialog";
 import { Section } from "./Section";
@@ -362,11 +361,6 @@ const LayerUI = ({
                               onChange={() => onPenModeToggle(null)}
                               title={t("toolBar.penMode")}
                               penDetected={appState.penDetected}
-                            />
-                            <LockButton
-                              checked={appState.activeTool.locked}
-                              onChange={onLockToggle}
-                              title={t("toolBar.lock")}
                             />
 
                             {/* <div className="App-toolbar__divider" /> */}
