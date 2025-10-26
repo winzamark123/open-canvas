@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import React from "react";
+import { useUser, SignInButton, UserButton } from "@clerk/clerk-react";
 
 import {
   CLASSES,
@@ -161,6 +162,7 @@ const LayerUI = ({
 }: LayerUIProps) => {
   const device = useDevice();
   const tunnels = useInitializeTunnels();
+  const { isSignedIn, user } = useUser();
 
   const spacing =
     appState.stylesPanelMode === "compact"
@@ -609,6 +611,29 @@ const LayerUI = ({
       )}
       {!device.editor.isMobile && (
         <>
+          <div className="absolute top-4 right-4" style={{ zIndex: 10 }}>
+            {isSignedIn ? (
+              <UserButton afterSignOutUrl="/" />
+            ) : (
+              <SignInButton mode="modal">
+                <button
+                  className="pointer-events-auto"
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--color-gray-30)",
+                    background: "var(--color-surface-primary)",
+                    color: "var(--color-text-primary)",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                  }}
+                >
+                  Sign In
+                </button>
+              </SignInButton>
+            )}
+          </div>
           <div
             className="layer-ui__wrapper"
             style={

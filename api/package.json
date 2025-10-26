@@ -1,6 +1,7 @@
 {
   "type": "module",
   "dependencies": {
-    "@fal-ai/client": "^1.7.0"
+    "@fal-ai/client": "^1.7.0",
+    "svix": "^1.80.0"
   }
 }
