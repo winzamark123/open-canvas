@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import React from "react";
+import { useUser, SignInButton, UserButton } from "@clerk/clerk-react";
 
 import {
   CLASSES,
@@ -161,6 +162,7 @@ const LayerUI = ({
 }: LayerUIProps) => {
   const device = useDevice();
   const tunnels = useInitializeTunnels();
+  const { isSignedIn, user } = useUser();
 
   const spacing =
     appState.stylesPanelMode === "compact"
@@ -428,6 +430,31 @@ const LayerUI = ({
               />
             )}
             {renderTopRightUI?.(device.editor.isMobile, appState)}
+            {!device.editor.isMobile && (
+              <div style={{ marginLeft: "8px" }}>
+                {isSignedIn ? (
+                  <UserButton afterSignOutUrl="/" />
+                ) : (
+                  <SignInButton mode="modal">
+                    <button
+                      className="pointer-events-auto"
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--color-gray-30)",
+                        background: "var(--color-surface-primary)",
+                        color: "var(--color-text-primary)",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Sign In
+                    </button>
+                  </SignInButton>
+                )}
+              </div>
+            )}
             {!appState.viewModeEnabled &&
               appState.openDialog?.name !== "elementLinkSelector" &&
               // hide button when sidebar docked
