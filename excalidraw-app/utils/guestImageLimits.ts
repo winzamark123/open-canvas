@@ -3,7 +3,7 @@
  */
 
 // Storage key for guest image generation count
-const GUEST_IMAGE_LIMIT_KEY = 'excalidraw-guest-image-count';
+const GUEST_IMAGE_LIMIT_KEY = "excalidraw-guest-image-count";
 
 // Hard limit for guest users
 export const GUEST_IMAGE_GENERATION_LIMIT = 10;
@@ -16,7 +16,7 @@ export const getGuestImageCount = (): number => {
     const stored = localStorage.getItem(GUEST_IMAGE_LIMIT_KEY);
     return stored ? parseInt(stored, 10) : 0;
   } catch (error) {
-    console.error('Failed to get guest image count:', error);
+    console.error("Failed to get guest image count:", error);
     return 0;
   }
 };
@@ -31,7 +31,7 @@ export const incrementGuestImageCount = (): number => {
     localStorage.setItem(GUEST_IMAGE_LIMIT_KEY, newCount.toString());
     return newCount;
   } catch (error) {
-    console.error('Failed to increment guest image count:', error);
+    console.error("Failed to increment guest image count:", error);
     return getGuestImageCount();
   }
 };
@@ -59,6 +59,6 @@ export const resetGuestImageCount = (): void => {
   try {
     localStorage.removeItem(GUEST_IMAGE_LIMIT_KEY);
   } catch (error) {
-    console.error('Failed to reset guest image count:', error);
+    console.error("Failed to reset guest image count:", error);
   }
 };
