@@ -10,10 +10,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const {
       prompt,
       aspect_ratio = "1:1",
-      num_inference_steps = 28,
       guidance_scale = 3.5,
       num_images = 1,
-      enable_safety_checker = true,
       enhance_prompt = true,
     } = req.body;
 
@@ -40,10 +38,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       input: {
         prompt,
         aspect_ratio,
-        num_inference_steps,
         guidance_scale,
         num_images,
-        enable_safety_checker,
         enhance_prompt,
       },
     });
