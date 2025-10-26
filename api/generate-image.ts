@@ -9,12 +9,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const {
       prompt,
-      aspect_ratio = "1:1",
+      image_size = "square_hd",
+      aspect_ratio,
       num_inference_steps = 28,
       guidance_scale = 3.5,
       num_images = 1,
       enable_safety_checker = true,
       enhance_prompt = true,
+      seed,
     } = req.body;
 
     if (!prompt || typeof prompt !== "string") {
@@ -39,12 +41,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const result = await fal.run("fal-ai/flux-pro/kontext/max/text-to-image", {
       input: {
         prompt,
-        aspect_ratio,
+        image_size: aspect_ratio || image_size, // Use aspect_ratio if provided for backwards compatibility
         num_inference_steps,
         guidance_scale,
         num_images,
         enable_safety_checker,
         enhance_prompt,
+        ...(seed !== undefined && { seed }),
       },
     });
 

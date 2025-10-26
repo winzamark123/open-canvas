@@ -2,9 +2,7 @@ import { useState, useRef, useEffect } from "react";
 
 import { newImageElement, isImageElement } from "@excalidraw/element";
 
-import { Paperclip, PenLine, Text, X, Square } from "lucide-react";
-
-import { ArrowUp } from "lucide-react";
+import { Paperclip, X, Square, ArrowUp, Settings } from "lucide-react";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import type { BinaryFileData } from "@excalidraw/excalidraw/types";
@@ -25,16 +23,19 @@ import {
   SelectValue,
 } from "./ui/select";
 
-const modes = [
-  {
-    icon: PenLine,
-    label: "Draw",
-  },
-  {
-    icon: Text,
-    label: "Write",
-  },
-];
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+
+interface ImageSettings {
+  num_images: number;
+  image_size: string;
+  seed?: number;
+}
 
 interface AttachedCanvasImage {
   id: string;
@@ -55,7 +56,10 @@ interface ChatOverlayProps {
 export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedMode, setSelectedMode] = useState(modes[0].label);
+  const [settings, setSettings] = useState<ImageSettings>({
+    num_images: 1,
+    image_size: "square_hd",
+  });
   const [canvasImages, setCanvasImages] = useState<AttachedCanvasImage[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -262,6 +266,9 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
           body: JSON.stringify({
             prompt: enhancedPrompt,
             images: images,
+            image_size: settings.image_size,
+            num_images: settings.num_images,
+            ...(settings.seed !== undefined && { seed: settings.seed }),
           }),
           signal: abortControllerRef.current.signal,
         });
@@ -282,7 +289,12 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ prompt: currentPrompt }),
+          body: JSON.stringify({
+            prompt: currentPrompt,
+            image_size: settings.image_size,
+            num_images: settings.num_images,
+            ...(settings.seed !== undefined && { seed: settings.seed }),
+          }),
           signal: abortControllerRef.current.signal,
         });
 
@@ -392,46 +404,77 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
         </div>
       </div>
       <div className="flex gap-2 w-full">
-        <Select
-          value={selectedMode}
-          onValueChange={setSelectedMode}
-          disabled={isGenerating}
-        >
-          <SelectTrigger className="w-fit rounded-full shadow-none">
-            <SelectValue>
-              <div className="flex items-center gap-2">
-                {isGenerating ? (
-                  <div className="animate-spin size-3 border border-gray-400 border-t-transparent rounded-full" />
-                ) : (
-                  modes.find((mode) => mode.label === selectedMode)?.icon &&
-                  (() => {
-                    const Icon = modes.find(
-                      (mode) => mode.label === selectedMode,
-                    )!.icon;
-                    return <Icon className="size-3" />;
-                  })()
-                )}
-                {/* <span className="text-xs">{selectedMode}</span> */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full shadow-none"
+              disabled={isGenerating}
+            >
+              <Settings className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64">
+            <DropdownMenuLabel>Image Settings</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <div className="p-2 space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Number of Images</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={4}
+                  value={settings.num_images}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      num_images: parseInt(e.target.value) || 1,
+                    }))
+                  }
+                  className="h-8"
+                />
               </div>
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel>Mode</SelectLabel>
-              {modes.map((mode) => {
-                const Icon = mode.icon;
-                return (
-                  <SelectItem key={mode.label} value={mode.label}>
-                    <div className="flex items-center gap-2">
-                      <Icon className="size-4" />
-                      <span>{mode.label}</span>
-                    </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Image Size</label>
+                <Select
+                  value={settings.image_size}
+                  onValueChange={(value) =>
+                    setSettings((prev) => ({ ...prev, image_size: value }))
+                  }
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="square_hd">Square HD</SelectItem>
+                    <SelectItem value="landscape_16_9">
+                      Landscape 16:9
+                    </SelectItem>
+                    <SelectItem value="landscape_4_3">Landscape 4:3</SelectItem>
+                    <SelectItem value="portrait_16_9">Portrait 16:9</SelectItem>
+                    <SelectItem value="portrait_4_3">Portrait 4:3</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Seed (Optional)</label>
+                <Input
+                  type="number"
+                  placeholder="Random"
+                  value={settings.seed ?? ""}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      seed: e.target.value ? parseInt(e.target.value) : undefined,
+                    }))
+                  }
+                  className="h-8"
+                />
+              </div>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Input
           type="text"
           placeholder="Ask Anything..."

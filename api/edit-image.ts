@@ -14,6 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       num_images = 1,
       max_images = 1,
       enable_safety_checker = true,
+      seed,
     } = req.body;
 
     if (!prompt || typeof prompt !== "string") {
@@ -76,6 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         num_images,
         max_images,
         enable_safety_checker,
+        ...(seed !== undefined && { seed }),
       },
     });
 
