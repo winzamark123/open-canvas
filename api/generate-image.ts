@@ -9,13 +9,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const {
       prompt,
-      image_size = "square_hd",
+      aspect_ratio = "1:1",
       num_inference_steps = 28,
-      guidance_scale = 4.5,
+      guidance_scale = 3.5,
       num_images = 1,
       enable_safety_checker = true,
-      output_format = "jpeg",
-      acceleration = "regular",
+      enhance_prompt = true,
     } = req.body;
 
     if (!prompt || typeof prompt !== "string") {
@@ -37,16 +36,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     // Call fal.ai API using client
-    const result = await fal.run("fal-ai/flux/krea", {
+    const result = await fal.run("fal-ai/flux-pro/kontext/max/text-to-image", {
       input: {
         prompt,
-        image_size,
+        aspect_ratio,
         num_inference_steps,
         guidance_scale,
         num_images,
         enable_safety_checker,
-        output_format,
-        acceleration,
+        enhance_prompt,
       },
     });
 
