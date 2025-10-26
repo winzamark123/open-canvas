@@ -35,7 +35,6 @@ import {
   CompactShapeActions,
 } from "./Actions";
 import { LoadingMessage } from "./LoadingMessage";
-import { LockButton } from "./LockButton";
 import { MobileMenu } from "./MobileMenu";
 import { PasteChartDialog } from "./PasteChartDialog";
 import { Section } from "./Section";
@@ -56,6 +55,7 @@ import ElementLinkDialog from "./ElementLinkDialog";
 import { ErrorDialog } from "./ErrorDialog";
 import { EyeDropper, activeEyeDropperAtom } from "./EyeDropper";
 import { HandButton } from "./HandButton";
+import { RecenterButton } from "./RecenterButton";
 import { HelpDialog } from "./HelpDialog";
 import { ImageExportDialog } from "./ImageExportDialog";
 import { Island } from "./Island";
@@ -362,11 +362,6 @@ const LayerUI = ({
                               title={t("toolBar.penMode")}
                               penDetected={appState.penDetected}
                             />
-                            <LockButton
-                              checked={appState.activeTool.locked}
-                              onChange={onLockToggle}
-                              title={t("toolBar.lock")}
-                            />
 
                             {/* <div className="App-toolbar__divider" /> */}
 
@@ -375,6 +370,15 @@ const LayerUI = ({
                               onChange={() => onHandToolToggle()}
                               title={t("toolBar.hand")}
                               isMobile
+                            />
+
+                            <RecenterButton
+                              onClick={() => {
+                                setAppState((appState) => ({
+                                  ...calculateScrollCenter(elements, appState),
+                                }));
+                              }}
+                              title="Recenter canvas"
                             />
 
                             <ShapesSwitcher
