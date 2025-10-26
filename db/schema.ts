@@ -60,9 +60,6 @@ export const imageGenerations = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    projectId: varchar("project_id", { length: 255 }),
-    prompt: text("prompt"),
-    imageUrl: text("image_url"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({

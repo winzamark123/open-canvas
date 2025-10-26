@@ -91,13 +91,14 @@
     "rm:node_modules": "rimraf --glob node_modules excalidraw-app/node_modules packages/*/node_modules",
     "clean-install": "yarn rm:node_modules && yarn install",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx db/migrate.ts",
-    "db:seed": "tsx db/seed.ts",
+    "db:migrate": "tsx --env-file=.env.local db/migrate.ts",
+    "db:seed": "tsx --env-file=.env.local db/seed.ts",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f postgres"
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f postgres"
+    
   },
   "resolutions": {
     "strip-ansi": "6.0.1"

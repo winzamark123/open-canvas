@@ -16,15 +16,15 @@ async function seed() {
           stripePriceId: null,
         },
         {
-          name: "pro",
-          imageGenerationLimit: 100,
-          priceMonthly: "9.99",
+          name: "standard",
+          imageGenerationLimit: 60,
+          priceMonthly: "5",
           stripePriceId: null, // Add real Stripe price ID later
         },
         {
-          name: "enterprise",
-          imageGenerationLimit: -1, // -1 = unlimited
-          priceMonthly: "29.99",
+          name: "pro",
+          imageGenerationLimit: 150, // -1 = unlimited
+          priceMonthly: "11",
           stripePriceId: null, // Add real Stripe price ID later
         },
       ])

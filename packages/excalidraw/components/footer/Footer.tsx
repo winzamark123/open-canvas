@@ -22,15 +22,15 @@ const Footer = ({
   return (
     <footer
       role="contentinfo"
-      className="absolute bottom-2 px-4 flex w-full items-end justify-between"
+      className="absolute px-4 flex w-full items-end justify-between"
       style={{
         position: "absolute",
-        bottom: "0.5rem",
+        bottom: "1rem",
         alignItems: "end",
       }}
     >
       <div
-        className="flex justify-start items-center self-end gap-2 rounded-2xl bg-white p-2 px-4"
+        className="absolute bottom-4 flex justify-start items-center self-end gap-2 rounded-2xl bg-white p-2 px-4"
         style={{
           height: "fit-content",
         }}
