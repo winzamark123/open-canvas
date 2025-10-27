@@ -2,6 +2,8 @@
   "type": "module",
   "dependencies": {
     "@fal-ai/client": "^1.7.0",
-    "svix": "^1.80.0"
+    "svix": "^1.80.0",
+    "drizzle-orm": "0.44.7",
+    "pg": "8.16.3"
   }
 }
