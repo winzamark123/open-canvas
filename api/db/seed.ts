@@ -1,5 +1,5 @@
-import { db, closeConnection } from "./index";
-import { plans } from "./schema";
+import { db, closeConnection } from "./index.js";
+import { plans } from "./schema.js";
 
 async function seed() {
   console.log("⏳ Seeding database...");

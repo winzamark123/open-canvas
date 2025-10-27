@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import * as schema from "./schema";
+import * as schema from "./schema.js";
 
 // For development (long-lived connection) vs production (serverless)
 const isDevelopment = process.env.NODE_ENV === "development";
