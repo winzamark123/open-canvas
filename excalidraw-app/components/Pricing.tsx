@@ -25,6 +25,7 @@ interface PricingTier {
   features: string[];
   cta: string;
   popular?: boolean;
+  borderColor?: string;
 }
 
 interface PricingProps {
@@ -39,6 +40,7 @@ const pricingTiers: PricingTier[] = [
     price: 0,
     features: ["Basic drawing features", "Limited image generations"],
     cta: "Get Started",
+    borderColor: "border-primary",
   },
   {
     name: "Standard",
@@ -51,6 +53,7 @@ const pricingTiers: PricingTier[] = [
     ],
     cta: "Upgrade to Standard",
     popular: true,
+    borderColor: "border-primary",
   },
   {
     name: "Pro",
@@ -64,6 +67,7 @@ const pricingTiers: PricingTier[] = [
       "Unlimited private projects",
     ],
     cta: "Upgrade to Pro",
+    borderColor: "border-rose-400",
   },
 ];
 
@@ -84,7 +88,7 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
               <Card
                 key={tier.name}
                 className={`relative flex flex-col ${
-                  tier.popular ? "border-primary" : "border-border"
+                  tier.popular ? "border-primary" : tier.borderColor
                 }`}
               >
                 {tier.popular && (
