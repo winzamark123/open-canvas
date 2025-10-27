@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useUser } from "@clerk/clerk-react";
 
 import { newImageElement, isImageElement } from "@excalidraw/element";
 
@@ -14,6 +15,7 @@ import { generateNKeysBetween } from "fractional-indexing";
 
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import { SignInModal } from "./ui/SignInModal";
 
 import {
   Select,
@@ -24,6 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+
+// Free usage constants
+const FREE_GENERATIONS_LIMIT = 10;
+const USAGE_STORAGE_KEY = "excalidraw_free_generations_used";
 
 const modes = [
   {
@@ -53,13 +59,51 @@ interface ChatOverlayProps {
 }
 
 export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
+  const { isSignedIn, user } = useUser();
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedMode, setSelectedMode] = useState(modes[0].label);
   const [canvasImages, setCanvasImages] = useState<AttachedCanvasImage[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [usageCount, setUsageCount] = useState(0);
+  const [showSignInModal, setShowSignInModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Load usage count from localStorage on component mount (only for non-signed-in users)
+  useEffect(() => {
+    if (!isSignedIn) {
+      const savedUsage = localStorage.getItem(USAGE_STORAGE_KEY);
+      if (savedUsage) {
+        const parsedUsage = parseInt(savedUsage, 10);
+        if (!isNaN(parsedUsage)) {
+          setUsageCount(parsedUsage);
+        }
+      }
+    } else {
+      // Reset usage count for signed-in users
+      setUsageCount(0);
+    }
+  }, [isSignedIn]);
+
+  // Helper function to check if user can generate more images
+  const canGenerate = () => {
+    // Signed-in users have unlimited generations
+    if (isSignedIn) {
+      return true;
+    }
+    // Non-signed-in users have limited generations
+    return usageCount < FREE_GENERATIONS_LIMIT;
+  };
+
+  // Helper function to increment usage count (only for non-signed-in users)
+  const incrementUsage = () => {
+    if (!isSignedIn) {
+      const newCount = usageCount + 1;
+      setUsageCount(newCount);
+      localStorage.setItem(USAGE_STORAGE_KEY, newCount.toString());
+    }
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -208,6 +252,12 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
       return;
     }
 
+    // Check if user has reached free generation limit
+    if (!canGenerate()) {
+      setShowSignInModal(true);
+      return;
+    }
+
     setIsGenerating(true);
     const currentPrompt = prompt.trim(); // Store prompt before clearing
 
@@ -275,6 +325,9 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
         await addImageToCanvas({
           imageDataUrl: data.imageData,
         });
+
+        // Increment usage count after successful generation
+        incrementUsage();
       } else {
         // Use generate endpoint without images
         const response = await fetch("/api/generate-image", {
@@ -295,6 +348,9 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
         await addImageToCanvas({
           imageDataUrl: data.imageData,
         });
+
+        // Increment usage count after successful generation
+        incrementUsage();
       }
 
       // Clear the input
@@ -329,7 +385,14 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   };
 
   return (
-    <div className="flex flex-col items-center p-2 bg-white rounded-2xl flex-1 max-w-3xl shadow-md z-100 pointer-events-auto">
+    <>
+      <SignInModal
+        isOpen={showSignInModal}
+        onClose={() => setShowSignInModal(false)}
+        remainingGenerations={Math.max(0, FREE_GENERATIONS_LIMIT - usageCount)}
+        maxFreeGenerations={FREE_GENERATIONS_LIMIT}
+      />
+      <div className="flex flex-col items-center p-2 bg-white rounded-2xl flex-1 max-w-3xl shadow-md z-100 pointer-events-auto">
       <input
         ref={fileInputRef}
         type="file"
@@ -391,6 +454,24 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
           ))}
         </div>
       </div>
+      
+      {/* Usage indicator for non-signed-in users */}
+      {!isSignedIn && usageCount > 0 && (
+        <div className="text-xs text-gray-500 mb-2 text-center">
+          {canGenerate() 
+            ? `${FREE_GENERATIONS_LIMIT - usageCount} free generations remaining`
+            : `Free limit reached (${FREE_GENERATIONS_LIMIT}/${FREE_GENERATIONS_LIMIT})`
+          }
+        </div>
+      )}
+      
+      {/* Unlimited indicator for signed-in users */}
+      {isSignedIn && (
+        <div className="text-xs text-green-600 mb-2 text-center">
+          ✨ Unlimited generations available
+        </div>
+      )}
+      
       <div className="flex gap-2 w-full">
         <Select
           value={selectedMode}
@@ -464,10 +545,11 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
           />
           <Button
             variant="outline"
-            onClick={isGenerating ? handleStop : handleSubmit}
+            onClick={isGenerating ? handleStop : !canGenerate() && prompt.trim() ? () => setShowSignInModal(true) : handleSubmit}
             disabled={!isGenerating && !prompt.trim()}
             size="sm"
             className="rounded-full aspect-square shadow-none !bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            title={!canGenerate() ? `You've used all ${FREE_GENERATIONS_LIMIT} free generations. Click to sign in for unlimited access.` : undefined}
           >
             {isGenerating ? (
               <Square className="size-3" />
@@ -478,5 +560,6 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
         </div>
       </div>
     </div>
+    </>
   );
 };
