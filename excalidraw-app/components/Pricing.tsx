@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -72,9 +72,65 @@ const pricingTiers: PricingTier[] = [
 ];
 
 export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        setIsAnimating(true);
+      }, 50);
+      return () => clearTimeout(timer);
+    } else {
+      setIsAnimating(false);
+    }
+  }, [isOpen]);
+
+  const handleClose = () => {
+    setIsAnimating(false);
+    // Wait for animation to complete before actually closing
+    setTimeout(() => {
+      onClose();
+    }, 300);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto">
+    <>
+      {isOpen && (
+        <>
+          {/* Custom backdrop with fade animation */}
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              opacity: isAnimating ? 1 : 0,
+              transition: 'opacity 0.3s ease-out',
+              zIndex: 9998,
+              backdropFilter: 'blur(2px)',
+            }}
+            onClick={handleClose}
+          />
+          
+          {/* Custom dialog content */}
+          <div
+            className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto bg-white rounded-lg shadow-xl border"
+            style={{
+              position: 'fixed',
+              bottom: isAnimating ? '50%' : '-100%',
+              left: '50%',
+              top: 'auto',
+              transform: `translate(-50%, ${isAnimating ? '50%' : '0%'})`,
+              transition: isAnimating 
+                ? 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)' 
+                : 'all 0.3s ease-out',
+              opacity: isAnimating ? 1 : 0,
+              zIndex: 9999,
+              padding: '24px',
+              maxWidth: '1000px',
+              width: '90vw',
+            }}
+          >
         <DialogHeader>
           <DialogTitle className="text-2xl">Choose Your Plan</DialogTitle>
           <DialogDescription>
@@ -124,7 +180,7 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
                   <Button
                     className="w-full"
                     variant={tier.popular ? "default" : "outline"}
-                    onClick={onClose}
+                    onClick={handleClose}
                   >
                     {tier.cta}
                   </Button>
@@ -133,7 +189,9 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
             ))}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+          </div>
+        </>
+      )}
+    </>
   );
 };
