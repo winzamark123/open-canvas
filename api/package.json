@@ -1,6 +1,7 @@
 {
   "type": "module",
   "dependencies": {
+    "@clerk/backend": "^1.18.7",
     "@fal-ai/client": "^1.7.0",
     "svix": "^1.80.0",
     "drizzle-orm": "0.44.7",

@@ -94,6 +94,7 @@
     "db:migrate": "tsx --env-file=.env.local api/db/migrate.ts",
     "db:seed": "tsx --env-file=.env.local api/db/seed.ts",
     "db:studio": "drizzle-kit studio",
+    "db:clear": "docker compose down -v",
     "db:push": "drizzle-kit push",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",

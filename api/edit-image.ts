@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { fal } from "@fal-ai/client";
+import { baseEdgeHandler } from "./lib/baseEdgeHandler.js";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function editImageHandler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -114,3 +115,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 }
+
+export default baseEdgeHandler({
+  handler: editImageHandler,
+  requireAuth: false,
+});

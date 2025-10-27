@@ -69,6 +69,7 @@ import { Provider, useAtomValue, appJotaiStore } from "./app-jotai";
 
 import { STORAGE_KEYS, SYNC_BROWSER_TABS_TIMEOUT } from "./app_constants";
 import { AppFooter } from "./components/AppFooter";
+import { AppHeader } from "./components/AppHeader";
 import { AppMainMenu } from "./components/AppMainMenu";
 import { TopErrorBoundary } from "./components/TopErrorBoundary";
 
@@ -596,6 +597,7 @@ const ExcalidrawWrapper = () => {
           refresh={() => forceRefresh((prev) => !prev)}
         />
         <AppWelcomeScreen />
+        <AppHeader />
         <OverwriteConfirmDialog>
           <OverwriteConfirmDialog.Actions.ExportToImage />
           <OverwriteConfirmDialog.Actions.SaveToDisk />

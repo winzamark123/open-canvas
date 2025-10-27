@@ -1,8 +1,5 @@
 import clsx from "clsx";
 import React from "react";
-import { useUser, SignInButton, UserButton } from "@clerk/clerk-react";
-import { Pricing } from "../../../excalidraw-app/components/Pricing";
-import { Button } from "./ui/button";
 
 import {
   CLASSES,
@@ -31,7 +28,6 @@ import { useAtom, useAtomValue } from "../editor-jotai";
 
 import { t } from "../i18n";
 import { calculateScrollCenter } from "../scene";
-import { SquareArrowRightIcon as LoginIcon } from "lucide-react";
 
 import {
   SelectedShapeActions,
@@ -165,8 +161,6 @@ const LayerUI = ({
 }: LayerUIProps) => {
   const device = useDevice();
   const tunnels = useInitializeTunnels();
-  const { isSignedIn, user } = useUser();
-  const [isPricingModalOpen, setIsPricingModalOpen] = React.useState(false);
 
   const spacing =
     appState.stylesPanelMode === "compact"
@@ -615,31 +609,7 @@ const LayerUI = ({
       )}
       {!device.editor.isMobile && (
         <>
-          <div
-            className="absolute top-4 right-4 flex gap-2"
-            style={{ zIndex: 10 }}
-          >
-            <Button
-              onClick={() => setIsPricingModalOpen(true)}
-              variant="outline"
-            >
-              Pricing
-            </Button>
-            {isSignedIn ? (
-              <UserButton afterSignOutUrl="/" />
-            ) : (
-              <SignInButton mode="modal">
-                <Button variant="outline">
-                  <LoginIcon className="size-4" />
-                  Sign in
-                </Button>
-              </SignInButton>
-            )}
-          </div>
-          <Pricing
-            isOpen={isPricingModalOpen}
-            onClose={() => setIsPricingModalOpen(false)}
-          />
+          <tunnels.HeaderTunnel.Out />
           <div
             className="layer-ui__wrapper"
             style={
