@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import React from "react";
 import { useUser, SignInButton, UserButton } from "@clerk/clerk-react";
+import { Pricing } from "../../../excalidraw-app/components/Pricing";
 
 import {
   CLASSES,
@@ -163,6 +164,7 @@ const LayerUI = ({
   const device = useDevice();
   const tunnels = useInitializeTunnels();
   const { isSignedIn, user } = useUser();
+  const [isPricingModalOpen, setIsPricingModalOpen] = React.useState(false);
 
   const spacing =
     appState.stylesPanelMode === "compact"
@@ -611,7 +613,26 @@ const LayerUI = ({
       )}
       {!device.editor.isMobile && (
         <>
-          <div className="absolute top-4 right-4" style={{ zIndex: 10 }}>
+          <div
+            className="absolute top-4 right-4 flex gap-2"
+            style={{ zIndex: 10 }}
+          >
+            <button
+              className="pointer-events-auto"
+              onClick={() => setIsPricingModalOpen(true)}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "8px",
+                border: "1px solid var(--color-gray-30)",
+                background: "var(--color-surface-primary)",
+                color: "var(--color-text-primary)",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: 500,
+              }}
+            >
+              Pricing
+            </button>
             {isSignedIn ? (
               <UserButton afterSignOutUrl="/" />
             ) : (
@@ -634,6 +655,10 @@ const LayerUI = ({
               </SignInButton>
             )}
           </div>
+          <Pricing
+            isOpen={isPricingModalOpen}
+            onClose={() => setIsPricingModalOpen(false)}
+          />
           <div
             className="layer-ui__wrapper"
             style={
