@@ -2,6 +2,7 @@ import clsx from "clsx";
 import React from "react";
 import { useUser, SignInButton, UserButton } from "@clerk/clerk-react";
 import { Pricing } from "../../../excalidraw-app/components/Pricing";
+import { Button } from "./ui/button";
 
 import {
   CLASSES,
@@ -30,6 +31,7 @@ import { useAtom, useAtomValue } from "../editor-jotai";
 
 import { t } from "../i18n";
 import { calculateScrollCenter } from "../scene";
+import { SquareArrowRightIcon as LoginIcon } from "lucide-react";
 
 import {
   SelectedShapeActions,
@@ -617,41 +619,20 @@ const LayerUI = ({
             className="absolute top-4 right-4 flex gap-2"
             style={{ zIndex: 10 }}
           >
-            <button
-              className="pointer-events-auto"
+            <Button
               onClick={() => setIsPricingModalOpen(true)}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "8px",
-                border: "1px solid var(--color-gray-30)",
-                background: "var(--color-surface-primary)",
-                color: "var(--color-text-primary)",
-                cursor: "pointer",
-                fontSize: "14px",
-                fontWeight: 500,
-              }}
+              variant="outline"
             >
               Pricing
-            </button>
+            </Button>
             {isSignedIn ? (
               <UserButton afterSignOutUrl="/" />
             ) : (
               <SignInButton mode="modal">
-                <button
-                  className="pointer-events-auto"
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: "8px",
-                    border: "1px solid var(--color-gray-30)",
-                    background: "var(--color-surface-primary)",
-                    color: "var(--color-text-primary)",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    fontWeight: 500,
-                  }}
-                >
-                  Sign In
-                </button>
+                <Button variant="outline">
+                  <LoginIcon className="size-4" />
+                  Sign in
+                </Button>
               </SignInButton>
             )}
           </div>

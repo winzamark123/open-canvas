@@ -14,6 +14,7 @@ import { generateNKeysBetween } from "fractional-indexing";
 
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import { useFreeUsage } from "../hooks/useFreeUsage";
 
 import {
   Select,
@@ -53,6 +54,15 @@ interface ChatOverlayProps {
 }
 
 export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
+  const {
+    usageCount,
+    canGenerate,
+    incrementUsage,
+    getRemainingGenerations,
+    isSignedIn,
+    maxFreeGenerations,
+  } = useFreeUsage();
+
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedMode, setSelectedMode] = useState(modes[0].label);
@@ -208,6 +218,15 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
       return;
     }
 
+    // Check if user has reached free generation limit
+    if (!canGenerate()) {
+      excalidrawAPI.setToast({
+        message: "Rate limit reached. Please try again later.",
+        type: "error",
+      });
+      return;
+    }
+
     setIsGenerating(true);
     const currentPrompt = prompt.trim(); // Store prompt before clearing
 
@@ -275,6 +294,9 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
         await addImageToCanvas({
           imageDataUrl: data.imageData,
         });
+
+        // Increment usage count after successful generation
+        incrementUsage();
       } else {
         // Use generate endpoint without images
         const response = await fetch("/api/generate-image", {
@@ -295,6 +317,9 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
         await addImageToCanvas({
           imageDataUrl: data.imageData,
         });
+
+        // Increment usage count after successful generation
+        incrementUsage();
       }
 
       // Clear the input
@@ -329,154 +354,167 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
   };
 
   return (
-    <div className="flex flex-col items-center p-2 bg-white rounded-2xl flex-1 max-w-3xl shadow-md z-100 pointer-events-auto">
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        style={{ display: "none" }}
-        onChange={handleFileSelect}
-      />
-      <div
-        className="w-full overflow-hidden transition-all duration-300 ease-in-out"
-        style={{
-          maxHeight:
-            canvasImages.length > 0 || uploadedFiles.length > 0
-              ? "500px"
-              : "0px",
-          opacity: canvasImages.length > 0 || uploadedFiles.length > 0 ? 1 : 0,
-          marginBottom:
-            canvasImages.length > 0 || uploadedFiles.length > 0
-              ? "0.5rem"
-              : "0px",
-        }}
-      >
-        <div className="flex gap-2 flex-wrap w-full">
-          {/* Canvas Images - auto-synced with selection */}
-          {canvasImages.map((img) => (
-            <div
-              key={img.id}
-              className="flex flex-col items-center gap-2 px-3 py-1.5 rounded-md text-xs border border-blue-300"
-            >
-              <div className="flex flex-col">
-                {img.fileId && (
-                  <span className="text-gray-700 font-medium">{img.id}</span>
-                )}
-                <span className="text-gray-500 text-[10px]">image/png</span>
-              </div>
-            </div>
-          ))}
-
-          {/* Uploaded Files - manual removal */}
-          {uploadedFiles.map((file, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs border border-gray-300"
-            >
-              <div className="flex flex-col">
-                <span className="text-gray-700 font-medium">
-                  {file.name.length > 20
-                    ? `${file.name.substring(0, 20)}...`
-                    : file.name}
-                </span>
-                <span className="text-gray-500 text-[10px]">
-                  {file.type || "unknown"}
-                </span>
-              </div>
-              <X
-                className="size-3 cursor-pointer text-gray-400 hover:text-red-500"
-                onClick={() => removeUploadedFile(index)}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="flex gap-2 w-full">
-        <Select
-          value={selectedMode}
-          onValueChange={setSelectedMode}
-          disabled={isGenerating}
-        >
-          <SelectTrigger className="w-fit rounded-full shadow-none">
-            <SelectValue>
-              <div className="flex items-center gap-2">
-                {isGenerating ? (
-                  <div className="animate-spin size-3 border border-gray-400 border-t-transparent rounded-full" />
-                ) : (
-                  modes.find((mode) => mode.label === selectedMode)?.icon &&
-                  (() => {
-                    const Icon = modes.find(
-                      (mode) => mode.label === selectedMode,
-                    )!.icon;
-                    return <Icon className="size-3" />;
-                  })()
-                )}
-                {/* <span className="text-xs">{selectedMode}</span> */}
-              </div>
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel>Mode</SelectLabel>
-              {modes.map((mode) => {
-                const Icon = mode.icon;
-                return (
-                  <SelectItem key={mode.label} value={mode.label}>
-                    <div className="flex items-center gap-2">
-                      <Icon className="size-4" />
-                      <span>{mode.label}</span>
-                    </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <Input
-          type="text"
-          placeholder="Ask Anything..."
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => {
-            if (
-              e.key === "Enter" &&
-              !e.shiftKey &&
-              prompt.trim() &&
-              !isGenerating
-            ) {
-              e.preventDefault();
-              handleSubmit(e);
-            }
-          }}
-          disabled={isGenerating}
-          className="flex-1"
-          style={{
-            border: "none",
-            outline: "none",
-            boxShadow: "none",
-          }}
+    <>
+      <div className="flex flex-col items-center p-2 bg-white rounded-2xl flex-1 max-w-3xl shadow-md z-100 pointer-events-auto">
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          style={{ display: "none" }}
+          onChange={handleFileSelect}
         />
+        <div
+          className="w-full overflow-hidden transition-all duration-300 ease-in-out"
+          style={{
+            maxHeight:
+              canvasImages.length > 0 || uploadedFiles.length > 0
+                ? "500px"
+                : "0px",
+            opacity:
+              canvasImages.length > 0 || uploadedFiles.length > 0 ? 1 : 0,
+            marginBottom:
+              canvasImages.length > 0 || uploadedFiles.length > 0
+                ? "0.5rem"
+                : "0px",
+          }}
+        >
+          <div className="flex gap-2 flex-wrap w-full">
+            {/* Canvas Images - auto-synced with selection */}
+            {canvasImages.map((img) => (
+              <div
+                key={img.id}
+                className="flex flex-col items-center gap-2 px-3 py-1.5 rounded-md text-xs border border-blue-300"
+              >
+                <div className="flex flex-col">
+                  {img.fileId && (
+                    <span className="text-gray-700 font-medium">{img.id}</span>
+                  )}
+                  <span className="text-gray-500 text-[10px]">image/png</span>
+                </div>
+              </div>
+            ))}
 
-        <div className="flex gap-2 items-center">
-          <Paperclip
-            className="size-4 cursor-pointer hover:text-gray-700"
-            onClick={() => fileInputRef.current?.click()}
-          />
-          <Button
-            variant="outline"
-            onClick={isGenerating ? handleStop : handleSubmit}
-            disabled={!isGenerating && !prompt.trim()}
-            size="sm"
-            className="rounded-full aspect-square shadow-none !bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            {/* Uploaded Files - manual removal */}
+            {uploadedFiles.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs border border-gray-300"
+              >
+                <div className="flex flex-col">
+                  <span className="text-gray-700 font-medium">
+                    {file.name.length > 20
+                      ? `${file.name.substring(0, 20)}...`
+                      : file.name}
+                  </span>
+                  <span className="text-gray-500 text-[10px]">
+                    {file.type || "unknown"}
+                  </span>
+                </div>
+                <X
+                  className="size-3 cursor-pointer text-gray-400 hover:text-red-500"
+                  onClick={() => removeUploadedFile(index)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Usage indicator for non-signed-in users */}
+        {!isSignedIn && usageCount > 0 && (
+          <div className="text-xs text-gray-500 mb-2 text-center">
+            {canGenerate()
+              ? `${getRemainingGenerations()} free generations remaining`
+              : "You've reached the message limit. Sign in to get a higher limit (it's free!)."}
+          </div>
+        )}
+
+        <div className="flex gap-2 w-full">
+          <Select
+            value={selectedMode}
+            onValueChange={setSelectedMode}
+            disabled={isGenerating}
           >
-            {isGenerating ? (
-              <Square className="size-3" />
-            ) : (
-              <ArrowUp className="size-4" />
-            )}
-          </Button>
+            <SelectTrigger className="w-fit rounded-full shadow-none">
+              <SelectValue>
+                <div className="flex items-center gap-2">
+                  {isGenerating ? (
+                    <div className="animate-spin size-3 border border-gray-400 border-t-transparent rounded-full" />
+                  ) : (
+                    modes.find((mode) => mode.label === selectedMode)?.icon &&
+                    (() => {
+                      const Icon = modes.find(
+                        (mode) => mode.label === selectedMode,
+                      )!.icon;
+                      return <Icon className="size-3" />;
+                    })()
+                  )}
+                  {/* <span className="text-xs">{selectedMode}</span> */}
+                </div>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>Mode</SelectLabel>
+                {modes.map((mode) => {
+                  const Icon = mode.icon;
+                  return (
+                    <SelectItem key={mode.label} value={mode.label}>
+                      <div className="flex items-center gap-2">
+                        <Icon className="size-4" />
+                        <span>{mode.label}</span>
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Input
+            type="text"
+            placeholder="Ask Anything..."
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                prompt.trim() &&
+                !isGenerating
+              ) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
+            disabled={isGenerating}
+            className="flex-1"
+            style={{
+              border: "none",
+              outline: "none",
+              boxShadow: "none",
+            }}
+          />
+
+          <div className="flex gap-2 items-center">
+            <Paperclip
+              className="size-4 cursor-pointer hover:text-gray-700"
+              onClick={() => fileInputRef.current?.click()}
+            />
+            <Button
+              variant="outline"
+              onClick={isGenerating ? handleStop : handleSubmit}
+              disabled={!isGenerating && !prompt.trim()}
+              size="sm"
+              className="rounded-full aspect-square shadow-none !bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGenerating ? (
+                <Square className="size-3" />
+              ) : (
+                <ArrowUp className="size-4" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };

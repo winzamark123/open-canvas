@@ -8,6 +8,7 @@ import { isImageElement } from "@excalidraw/element";
 import { newElementWith, newImageElement } from "@excalidraw/element";
 import { RefreshCw, Copy, Loader2, Info, Save, Shuffle } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useFreeUsage } from "../hooks/useFreeUsage";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +46,33 @@ const generateImage = async (prompt: string): Promise<string> => {
     throw new Error(data.error || "Failed to generate image");
   }
   return data.imageData;
+};
+
+/**
+ * Generate image with usage tracking
+ */
+const generateImageWithUsageTracking = async (
+  prompt: string,
+  canGenerate: () => boolean,
+  incrementUsage: () => void,
+  excalidrawAPI: ExcalidrawImperativeAPI,
+): Promise<string> => {
+  // Check if user can generate more images
+  if (!canGenerate()) {
+    excalidrawAPI.setToast({
+      message:
+        "Rate limit reached. Please try again later.",
+      type: "error",
+    });
+    throw new Error("Free generation limit reached");
+  }
+
+  const imageData = await generateImage(prompt);
+
+  // Increment usage count after successful generation
+  incrementUsage();
+
+  return imageData;
 };
 
 /**
@@ -267,6 +295,8 @@ interface AIImageButtonConfig {
     imageElement: ExcalidrawImageElement;
     description: string;
     excalidrawAPI: ExcalidrawImperativeAPI;
+    canGenerate: () => boolean;
+    incrementUsage: () => void;
   }) => Promise<void>;
   onClick?: () => void;
   description: string;
@@ -284,12 +314,21 @@ const regenerateImageAction = async ({
   imageElement,
   description,
   excalidrawAPI,
+  canGenerate,
+  incrementUsage,
 }: {
   imageElement: ExcalidrawImageElement;
   description: string;
   excalidrawAPI: ExcalidrawImperativeAPI;
+  canGenerate: () => boolean;
+  incrementUsage: () => void;
 }) => {
-  const imageDataUrl = await generateImage(description);
+  const imageDataUrl = await generateImageWithUsageTracking(
+    description,
+    canGenerate,
+    incrementUsage,
+    excalidrawAPI,
+  );
   const binaryFileData = await createBinaryFileData(imageDataUrl);
 
   excalidrawAPI.addFiles([binaryFileData]);
@@ -318,12 +357,21 @@ const duplicateImageAction = async ({
   imageElement,
   description,
   excalidrawAPI,
+  canGenerate,
+  incrementUsage,
 }: {
   imageElement: ExcalidrawImageElement;
   description: string;
   excalidrawAPI: ExcalidrawImperativeAPI;
+  canGenerate: () => boolean;
+  incrementUsage: () => void;
 }) => {
-  const imageDataUrl = await generateImage(description);
+  const imageDataUrl = await generateImageWithUsageTracking(
+    description,
+    canGenerate,
+    incrementUsage,
+    excalidrawAPI,
+  );
   const binaryFileData = await createBinaryFileData(imageDataUrl);
 
   excalidrawAPI.addFiles([binaryFileData]);
@@ -451,6 +499,8 @@ const AIImageButtons = ({
 }: {
   excalidrawAPI: ExcalidrawImperativeAPI;
 }) => {
+  const { canGenerate, incrementUsage } = useFreeUsage();
+
   const appState = useExcalidrawAppState();
   const elements = useExcalidrawElements();
   const [activeAction, setActiveAction] = useState<string | null>(null);
@@ -521,9 +571,19 @@ const AIImageButtons = ({
                       imageElement,
                       description: analysis.description,
                       excalidrawAPI,
+                      canGenerate,
+                      incrementUsage,
                     });
                   } catch (err) {
                     console.error(`Error in ${config.title}:`, err);
+                    // Don't show additional error toast for usage limit reached
+                    if (
+                      err instanceof Error &&
+                      err.message === "Free generation limit reached"
+                    ) {
+                      // Toast is already shown in generateImageWithUsageTracking
+                      return;
+                    }
                     excalidrawAPI.setToast({
                       message: `Error: ${
                         err instanceof Error ? err.message : "Operation failed"
