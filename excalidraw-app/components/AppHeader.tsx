@@ -4,7 +4,7 @@ import { Header } from "@excalidraw/excalidraw/index";
 import { Button } from "./ui/button";
 import { Settings, LogOut, LogIn } from "lucide-react";
 import { Pricing } from "./Pricing";
-import { SettingsModal } from "./SettingsModal";
+import { SettingsModal } from "./Settings/SettingsModal";
 
 export const AppHeader = React.memo(() => {
   const { isSignedIn } = useUser();
@@ -18,9 +18,6 @@ export const AppHeader = React.memo(() => {
           className="absolute top-4 right-4 flex gap-2"
           style={{ zIndex: 10 }}
         >
-          <Button onClick={() => setIsPricingModalOpen(true)} variant="outline">
-            Pricing
-          </Button>
           {isSignedIn ? (
             <>
               <Button
@@ -32,12 +29,20 @@ export const AppHeader = React.memo(() => {
               </Button>
             </>
           ) : (
-            <SignInButton mode="redirect">
-              <Button variant="outline">
-                <LogIn className="size-4" />
-                Log in
+            <>
+              <Button
+                onClick={() => setIsPricingModalOpen(true)}
+                variant="outline"
+              >
+                Pricing
               </Button>
-            </SignInButton>
+              <SignInButton mode="redirect">
+                <Button variant="outline">
+                  <LogIn className="size-4" />
+                  Log in
+                </Button>
+              </SignInButton>
+            </>
           )}
         </div>
       </Header>

@@ -2,23 +2,48 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { verifyToken } from "@clerk/backend";
 import { getUserUsage, incrementImageGeneration } from "./db-helpers.js";
 
+export interface HandlerContext {
+  userId?: string;
+  clerkUserId?: string;
+  userUsage?: {
+    userId: string;
+    usageCount: number;
+    limit: number;
+    planName: string;
+  };
+}
+
 interface BaseHandlerConfig {
   handler: (
     req: VercelRequest,
     res: VercelResponse,
+    context?: HandlerContext,
   ) => Promise<void | VercelResponse>;
   requireAuth?: boolean;
+  checkUsageLimits?: boolean;
+  trackUsage?: boolean;
 }
 
 /**
- * Base handler wrapper that checks usage limits and tracks image generations
+ * Base handler wrapper that handles authentication, checks usage limits, and tracks image generations
+ * @param handler - The main request handler function
+ * @param requireAuth - Whether authentication is required (default: false)
+ * @param checkUsageLimits - Whether to check image generation limits (default: true)
+ * @param trackUsage - Whether to track image generation usage (default: true)
  */
 export function baseEdgeHandler(config: BaseHandlerConfig) {
-  const { handler, requireAuth = false } = config;
+  const {
+    handler,
+    requireAuth = false,
+    checkUsageLimits = true,
+    trackUsage = true,
+  } = config;
 
   return async (req: VercelRequest, res: VercelResponse) => {
     let userId: string | null = null;
     let clerkUserId: string | null = null;
+    let userUsage: HandlerContext["userUsage"] | undefined;
+    const context: HandlerContext = {};
 
     try {
       // Parse request to get Clerk session token (from Authorization header)
@@ -36,13 +61,13 @@ export function baseEdgeHandler(config: BaseHandlerConfig) {
 
           if (clerkUserId) {
             // Query DB for user's plan and current usage count
-            const userUsage = await getUserUsage(clerkUserId);
+            userUsage = await getUserUsage(clerkUserId);
             userId = userUsage.userId;
 
             console.log("userUsage", userUsage);
 
-            // Check if usage reaches the maximum limit
-            if (userUsage.usageCount >= userUsage.limit) {
+            // Check if usage reaches the maximum limit (only if checkUsageLimits is true)
+            if (checkUsageLimits && userUsage.usageCount >= userUsage.limit) {
               return res.status(403).json({
                 error: "Usage limit reached, please upgrade your plan",
                 details: {
@@ -52,6 +77,11 @@ export function baseEdgeHandler(config: BaseHandlerConfig) {
                 },
               });
             }
+
+            // Populate context with user information
+            context.userId = userId;
+            context.clerkUserId = clerkUserId;
+            context.userUsage = userUsage;
           }
         } catch (error) {
           console.error("Token verification or DB query failed:", error);
@@ -64,11 +94,11 @@ export function baseEdgeHandler(config: BaseHandlerConfig) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      // Call the wrapped handler function
-      await handler(req, res);
+      // Call the wrapped handler function with context
+      await handler(req, res, context);
 
-      // After successful response, increment usage for authenticated users
-      if (userId) {
+      // After successful response, increment usage for authenticated users (only if trackUsage is true)
+      if (userId && trackUsage) {
         // Non-blocking DB write (happens asynchronously within serverless timeout)
         incrementImageGeneration(userId).catch((error) => {
           console.error("Failed to increment image generation count:", error);

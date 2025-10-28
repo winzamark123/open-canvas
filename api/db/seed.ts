@@ -13,19 +13,28 @@ async function seed() {
           name: "free",
           imageGenerationLimit: 10,
           priceMonthly: "0",
-          stripePriceId: null,
+          stripePriceId:
+            process.env.NODE_ENV === "production"
+              ? null
+              : "price_1SN4FgLgrX5PSXCR5KGaPth4", // Add real Stripe price ID later
         },
         {
           name: "standard",
           imageGenerationLimit: 60,
           priceMonthly: "5",
-          stripePriceId: null, // Add real Stripe price ID later
+          stripePriceId:
+            process.env.NODE_ENV === "production"
+              ? null
+              : "price_1SMDNHLgrX5PSXCRdSqJn1D3", // Add real Stripe price ID later
         },
         {
           name: "pro",
           imageGenerationLimit: 150, // -1 = unlimited
           priceMonthly: "11",
-          stripePriceId: null, // Add real Stripe price ID later
+          stripePriceId:
+            process.env.NODE_ENV === "production"
+              ? null
+              : "price_1SMDNHLgrX5PSXCRnsoQ25a8", // Add real Stripe price ID later
         },
       ])
       .onConflictDoNothing();
