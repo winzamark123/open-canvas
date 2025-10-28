@@ -231,6 +231,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </div>
         );
 
+      case "logout":
+        return(
+
+        )
+
       default:
         return null;
     }
