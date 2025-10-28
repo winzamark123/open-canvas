@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Progress } from "./ui/progress";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { Progress } from "../ui/progress";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { SignOutButton } from "@clerk/clerk-react";
-import { Sidebar, SidebarContent, SidebarItem } from "./ui/sidebar";
+import { Sidebar, SidebarContent, SidebarItem } from "../ui/sidebar";
 import { BarChart3, CreditCard, Mail, LogOut } from "lucide-react";
-import { Button } from "./ui/button";
+import { Billing } from "./Billing";
 
 interface UsageData {
   planName: string;
@@ -164,21 +164,44 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
       case "billing":
         return (
+          <Billing
+            onManageSubscription={() => {
+              // TODO: Integrate with Stripe billing portal
+              console.log("Manage subscription clicked");
+            }}
+          />
+        );
+      case "contact":
+        return (
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Billing & Invoices</CardTitle>
+                <CardTitle
+                  className="text-2xl"
+                  style={{
+                    fontFamily: "Alga",
+                  }}
+                >
+                  Contact Us
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Billing and invoice history will be displayed here.
+                  For all support inquiries, including billing issues, receipts,
+                  and general assistance, please email{" "}
+                  <a
+                    href="mailto:opencanvas@gmail.com"
+                    className="text-blue-500 underline"
+                  >
+                    opencanvas@gmail.com
+                  </a>
                 </p>
               </CardContent>
             </Card>
           </div>
         );
 
-      case "contact":
+      case "logout":
         return (
           <div className="space-y-4">
             <Card>
