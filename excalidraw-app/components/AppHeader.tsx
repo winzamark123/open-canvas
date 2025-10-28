@@ -4,7 +4,7 @@ import { Header } from "@excalidraw/excalidraw/index";
 import { Button } from "./ui/button";
 import { Settings, LogOut, LogIn } from "lucide-react";
 import { Pricing } from "./Pricing";
-import { SettingsModal } from "./SettingsModal";
+import { SettingsModal } from "./Settings/SettingsModal";
 
 export const AppHeader = React.memo(() => {
   const { isSignedIn } = useUser();

@@ -1,7 +1,13 @@
 import * as React from "react";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardAction } from "./ui/card";
-import { cn } from "../lib/utils";
+import { Button } from "../ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardAction,
+} from "../ui/card";
+import { cn } from "../../lib/utils";
 
 // Mock invoice data - replace with Stripe integration later
 interface Invoice {
