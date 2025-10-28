@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
-import { db } from "../db/index.js";
-import { userSubscriptions, plans } from "../db/schema.js";
+import { db } from "../_db/index.js";
+import { userSubscriptions, plans } from "../_db/schema.js";
 import { eq } from "drizzle-orm";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);

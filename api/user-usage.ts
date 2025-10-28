@@ -1,13 +1,13 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { verifyToken } from "@clerk/backend";
-import { db } from "./db/index.js";
+import { db } from "./_db/index.js";
 import {
   users,
   userSubscriptions,
   plans,
   imageGenerations,
-} from "./db/schema.js";
-import { eq, and, count, desc, gt } from "drizzle-orm";
+} from "./_db/schema.js";
+import { eq, and, count } from "drizzle-orm";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") {
