@@ -7,6 +7,7 @@ import { SignOutButton } from "@clerk/clerk-react";
 import { Sidebar, SidebarContent, SidebarItem } from "./ui/sidebar";
 import { BarChart3, CreditCard, Mail, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
+import { Billing } from "./Billing";
 
 interface UsageData {
   planName: string;
@@ -165,16 +166,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       case "billing":
         return (
           <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Billing & Invoices</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Billing and invoice history will be displayed here.
-                </p>
-              </CardContent>
-            </Card>
+            <Billing
+              onManageSubscription={() => {
+                // TODO: Integrate with Stripe billing portal
+                console.log("Manage subscription clicked");
+              }}
+            />
           </div>
         );
 
