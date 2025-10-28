@@ -163,8 +163,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         );
 
       case "billing":
-        return <Billing />;
-
+        return (
+          <Billing
+            onManageSubscription={() => {
+              // TODO: Integrate with Stripe billing portal
+              console.log("Manage subscription clicked");
+            }}
+          />
+        );
       case "contact":
         return (
           <div className="space-y-4">
