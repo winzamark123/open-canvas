@@ -1,10 +1,10 @@
-import { db } from "../db/index.js";
+import { db } from "../_db/index.js";
 import {
   users,
   userSubscriptions,
   plans,
   imageGenerations,
-} from "../db/schema.js";
+} from "../_db/schema.js";
 import { eq, and, count } from "drizzle-orm";
 
 export interface UserUsage {
