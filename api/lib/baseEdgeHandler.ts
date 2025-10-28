@@ -39,6 +39,8 @@ export function baseEdgeHandler(config: BaseHandlerConfig) {
             const userUsage = await getUserUsage(clerkUserId);
             userId = userUsage.userId;
 
+            console.log("userUsage", userUsage);
+
             // Check if usage reaches the maximum limit
             if (userUsage.usageCount >= userUsage.limit) {
               return res.status(403).json({

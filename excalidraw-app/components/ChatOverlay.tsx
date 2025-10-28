@@ -15,6 +15,7 @@ import { generateNKeysBetween } from "fractional-indexing";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { useFreeUsage } from "../hooks/useFreeUsage";
+import { useAuth } from "@clerk/clerk-react";
 
 import {
   Select,
@@ -54,6 +55,7 @@ interface ChatOverlayProps {
 }
 
 export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
+  const { getToken } = useAuth();
   const {
     usageCount,
     canGenerate,
@@ -233,6 +235,9 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
     // Create new AbortController for this request
     abortControllerRef.current = new AbortController();
 
+    // Get the Clerk session token
+    const token = await getToken();
+
     try {
       // Check if we have attached images (canvas or uploaded files)
       const hasAttachedImages =
@@ -277,6 +282,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
           },
           body: JSON.stringify({
             prompt: enhancedPrompt,
@@ -303,6 +309,7 @@ export const ChatOverlay = ({ excalidrawAPI }: ChatOverlayProps) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
           },
           body: JSON.stringify({ prompt: currentPrompt }),
           signal: abortControllerRef.current.signal,

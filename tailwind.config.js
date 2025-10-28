@@ -8,6 +8,9 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        alga: ["Alga", "Excalifont", "sans-serif"],
+      },
       colors: {
         border: "var(--border)",
         input: "var(--input)",

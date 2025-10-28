@@ -40,7 +40,7 @@ const pricingTiers: PricingTier[] = [
     price: 0,
     features: ["Basic drawing features", "Limited image generations"],
     cta: "Get Started",
-    borderColor: "border-primary",
+    borderColor: "border-border",
   },
   {
     name: "Standard",
@@ -74,10 +74,20 @@ const pricingTiers: PricingTier[] = [
 export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto p-10">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Choose Your Plan</DialogTitle>
-          <DialogDescription>
+          <DialogTitle
+            className="text-4xl"
+            style={{
+              fontFamily: "Alga",
+            }}
+          >
+            AI brought into your favorite{" "}
+            <span className="font-bold italic underline decoration-2 underline-offset-4">
+              whiteboard
+            </span>
+          </DialogTitle>
+          <DialogDescription className="text-lg">
             Select the perfect plan for your creative needs
           </DialogDescription>
         </DialogHeader>
@@ -122,7 +132,7 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
 
                 <CardFooter>
                   <Button
-                    className="w-full"
+                    className="w-full cursor-pointer"
                     variant={tier.popular ? "default" : "outline"}
                     onClick={onClose}
                   >

@@ -9,6 +9,7 @@ import { newElementWith, newImageElement } from "@excalidraw/element";
 import { RefreshCw, Copy, Loader2, Info, Save, Shuffle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useFreeUsage } from "../hooks/useFreeUsage";
+import { useAuth } from "@clerk/clerk-react";
 import {
   Dialog,
   DialogContent,
@@ -35,10 +36,16 @@ import type {
 /**
  * Generate image via API
  */
-const generateImage = async (prompt: string): Promise<string> => {
+const generateImage = async (
+  prompt: string,
+  token: string | null,
+): Promise<string> => {
   const response = await fetch("/api/generate-image", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
     body: JSON.stringify({ prompt }),
   });
   const data = await response.json();
@@ -56,18 +63,18 @@ const generateImageWithUsageTracking = async (
   canGenerate: () => boolean,
   incrementUsage: () => void,
   excalidrawAPI: ExcalidrawImperativeAPI,
+  token: string | null,
 ): Promise<string> => {
   // Check if user can generate more images
   if (!canGenerate()) {
     excalidrawAPI.setToast({
-      message:
-        "Rate limit reached. Please try again later.",
+      message: "Rate limit reached. Please try again later.",
       type: "error",
     });
     throw new Error("Free generation limit reached");
   }
 
-  const imageData = await generateImage(prompt);
+  const imageData = await generateImage(prompt, token);
 
   // Increment usage count after successful generation
   incrementUsage();
@@ -297,6 +304,7 @@ interface AIImageButtonConfig {
     excalidrawAPI: ExcalidrawImperativeAPI;
     canGenerate: () => boolean;
     incrementUsage: () => void;
+    token: string | null;
   }) => Promise<void>;
   onClick?: () => void;
   description: string;
@@ -316,18 +324,21 @@ const regenerateImageAction = async ({
   excalidrawAPI,
   canGenerate,
   incrementUsage,
+  token,
 }: {
   imageElement: ExcalidrawImageElement;
   description: string;
   excalidrawAPI: ExcalidrawImperativeAPI;
   canGenerate: () => boolean;
   incrementUsage: () => void;
+  token: string | null;
 }) => {
   const imageDataUrl = await generateImageWithUsageTracking(
     description,
     canGenerate,
     incrementUsage,
     excalidrawAPI,
+    token,
   );
   const binaryFileData = await createBinaryFileData(imageDataUrl);
 
@@ -359,18 +370,21 @@ const duplicateImageAction = async ({
   excalidrawAPI,
   canGenerate,
   incrementUsage,
+  token,
 }: {
   imageElement: ExcalidrawImageElement;
   description: string;
   excalidrawAPI: ExcalidrawImperativeAPI;
   canGenerate: () => boolean;
   incrementUsage: () => void;
+  token: string | null;
 }) => {
   const imageDataUrl = await generateImageWithUsageTracking(
     description,
     canGenerate,
     incrementUsage,
     excalidrawAPI,
+    token,
   );
   const binaryFileData = await createBinaryFileData(imageDataUrl);
 
@@ -499,6 +513,7 @@ const AIImageButtons = ({
 }: {
   excalidrawAPI: ExcalidrawImperativeAPI;
 }) => {
+  const { getToken } = useAuth();
   const { canGenerate, incrementUsage } = useFreeUsage();
 
   const appState = useExcalidrawAppState();
@@ -567,12 +582,16 @@ const AIImageButtons = ({
                 if (config.function) {
                   setActiveAction(config.title);
                   try {
+                    // Get the Clerk session token
+                    const token = await getToken();
+
                     await config.function({
                       imageElement,
                       description: analysis.description,
                       excalidrawAPI,
                       canGenerate,
                       incrementUsage,
+                      token,
                     });
                   } catch (err) {
                     console.error(`Error in ${config.title}:`, err);

@@ -41,6 +41,7 @@ function Button({
   variant,
   size,
   asChild = false,
+  style,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
@@ -48,10 +49,20 @@ function Button({
   }) {
   const Comp = asChild ? Slot : "button";
 
+  // Inline styles for outline variant to prevent CSS overwriting
+  const outlineStyles: React.CSSProperties =
+    variant === "outline"
+      ? {
+          border: "1px solid var(--border)",
+          backgroundColor: "var(--background)",
+        }
+      : {};
+
   return (
     <Comp
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
+      style={{ ...outlineStyles, ...style }}
       {...props}
     />
   );
