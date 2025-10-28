@@ -4,13 +4,36 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Progress } from "../ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Sidebar, SidebarContent, SidebarItem } from "../ui/sidebar";
-import { BarChart3, CreditCard, Mail, LogOut } from "lucide-react";
+import { BarChart3, CreditCard, Mail, LogOut, ArrowRight } from "lucide-react";
+import { Button } from "../ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 import { Billing } from "./Billing";
+
+interface Event {
+  id: string;
+  date: string;
+  type: string;
+}
+
+interface NextPlan {
+  name: string;
+  imageGenerationLimit: number;
+  priceMonthly: string;
+}
 
 interface UsageData {
   planName: string;
   imageGenerationLimit: number;
   imageGenerationsUsed: number;
+  events: Event[];
+  nextPlan: NextPlan | null;
 }
 
 interface SettingsModalProps {
@@ -94,11 +117,26 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     setActiveTab(id);
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const handleUpgradeClick = () => {
+    console.log("Upgrade button clicked");
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case "usage":
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {loading && (
               <div className="flex items-center justify-center py-8">
                 <div className="text-gray-500">Loading...</div>
@@ -112,47 +150,148 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             )}
 
             {!loading && !error && usageData && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">
-                    Plan:{" "}
-                    {usageData.planName.charAt(0).toUpperCase() +
-                      usageData.planName.slice(1)}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <div className="mb-2 flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Image Generations
-                      </span>
-                      <span className="font-medium">
-                        {usageData.imageGenerationsUsed} /{" "}
-                        {usageData.imageGenerationLimit}
-                      </span>
-                    </div>
-                    <div className="relative">
-                      <Progress
-                        value={getProgressPercentage()}
-                        className="h-3"
-                      />
-                      <div
-                        className={`absolute inset-0 h-3 rounded-full transition-all ${getProgressColor()}`}
-                        style={{
-                          width: `${getProgressPercentage()}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
+              <>
+                {/* Top Grid Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Current Usage Card */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Current Usage</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <div className="mb-2 text-sm text-gray-600 dark:text-gray-400">
+                          Plan:{" "}
+                          <span className="font-medium text-gray-900 dark:text-gray-100">
+                            {usageData.planName.charAt(0).toUpperCase() +
+                              usageData.planName.slice(1)}
+                          </span>
+                        </div>
+                        <div className="mb-3 flex justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Image Generations
+                          </span>
+                          <span className="font-medium">
+                            {usageData.imageGenerationsUsed} /{" "}
+                            {usageData.imageGenerationLimit}
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <Progress
+                            value={getProgressPercentage()}
+                            className="h-3"
+                          />
+                          <div
+                            className={`absolute inset-0 h-3 rounded-full transition-all ${getProgressColor()}`}
+                            style={{
+                              width: `${getProgressPercentage()}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
 
-                  {getProgressPercentage() >= 80 && (
-                    <div className="rounded-md bg-yellow-50 p-3 text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
-                      You're approaching your generation limit. Consider
-                      upgrading your plan.
-                    </div>
+                      {getProgressPercentage() >= 80 && (
+                        <div className="rounded-md bg-yellow-50 p-3 text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
+                          You're approaching your generation limit. Consider
+                          upgrading your plan.
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Next Plan Card */}
+                  {usageData.nextPlan && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Upgrade Plan</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <div className="mb-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
+                            {usageData.nextPlan.name.charAt(0).toUpperCase() +
+                              usageData.nextPlan.name.slice(1)}
+                          </div>
+                          <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                            ${usageData.nextPlan.priceMonthly}/month
+                          </div>
+                          <div className="mb-4 space-y-2">
+                            <div className="text-sm text-gray-700 dark:text-gray-300">
+                              • {usageData.nextPlan.imageGenerationLimit} image
+                              generations/month
+                            </div>
+                            <div className="text-sm text-gray-700 dark:text-gray-300">
+                              •{" "}
+                              {usageData.nextPlan.imageGenerationLimit -
+                                usageData.imageGenerationLimit}{" "}
+                              more generations than current plan
+                            </div>
+                          </div>
+                        </div>
+                        <Button onClick={handleUpgradeClick} className="w-full">
+                          Upgrade Now
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </CardContent>
+                    </Card>
                   )}
-                </CardContent>
-              </Card>
+
+                  {/* Premium Plan Message */}
+                  {!usageData.nextPlan && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">
+                          Premium Member
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-600 dark:text-gray-400">
+                          You're on the highest plan with maximum benefits.
+                          Thank you for your support!
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Events Table */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      Recent Image Generations
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {usageData.events.length === 0 ? (
+                      <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+                        No image generations yet
+                      </p>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>ID</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {usageData.events.map((event) => (
+                            <TableRow key={event.id}>
+                              <TableCell>{formatDate(event.date)}</TableCell>
+                              <TableCell className="capitalize">
+                                {event.type.replace("_", " ")}
+                              </TableCell>
+                              <TableCell className="font-mono text-xs text-gray-500">
+                                {event.id.substring(0, 8)}...
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
             )}
           </div>
         );

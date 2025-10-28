@@ -7,7 +7,7 @@ import {
   plans,
   imageGenerations,
 } from "./db/schema.js";
-import { eq, and, count } from "drizzle-orm";
+import { eq, and, count, desc, gt } from "drizzle-orm";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") {
@@ -53,8 +53,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get user's subscription and plan
     const [subscription] = await db
       .select({
+        planId: plans.id,
         planName: plans.name,
         imageGenerationLimit: plans.imageGenerationLimit,
+        priceMonthly: plans.priceMonthly,
       })
       .from(userSubscriptions)
       .innerJoin(plans, eq(userSubscriptions.planId, plans.id))
@@ -71,10 +73,54 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .from(imageGenerations)
       .where(eq(imageGenerations.userId, user.id));
 
+    // Get recent image generation events (last 100)
+    const events = await db
+      .select({
+        id: imageGenerations.id,
+        createdAt: imageGenerations.createdAt,
+      })
+      .from(imageGenerations)
+      .where(eq(imageGenerations.userId, user.id))
+      .orderBy(desc(imageGenerations.createdAt))
+      .limit(100);
+
+    // Get next plan (if not on premium)
+    let nextPlan = null;
+    if (subscription.planName.toLowerCase() !== "premium") {
+      // Get all plans sorted by limit to find the next tier
+      const allPlans = await db
+        .select({
+          id: plans.id,
+          name: plans.name,
+          imageGenerationLimit: plans.imageGenerationLimit,
+          priceMonthly: plans.priceMonthly,
+        })
+        .from(plans)
+        .where(gt(plans.imageGenerationLimit, subscription.imageGenerationLimit))
+        .orderBy(plans.imageGenerationLimit)
+        .limit(1);
+
+      if (allPlans.length > 0) {
+        nextPlan = allPlans[0];
+      }
+    }
+
     return res.status(200).json({
       planName: subscription.planName,
       imageGenerationLimit: subscription.imageGenerationLimit,
       imageGenerationsUsed: generationCount?.count || 0,
+      events: events.map((event) => ({
+        id: event.id,
+        date: event.createdAt,
+        type: "image_generation",
+      })),
+      nextPlan: nextPlan
+        ? {
+            name: nextPlan.name,
+            imageGenerationLimit: nextPlan.imageGenerationLimit,
+            priceMonthly: nextPlan.priceMonthly,
+          }
+        : null,
     });
   } catch (error) {
     console.error("Error fetching user usage:", error);
