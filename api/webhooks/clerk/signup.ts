@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { Webhook } from "svix";
-import { db } from "../../db/index.js";
-import { users, plans, userSubscriptions } from "../../db/schema.js";
+import { db } from "../../_db/index.js";
+import { users, plans, userSubscriptions } from "../../_db/schema.js";
 import { eq } from "drizzle-orm";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
