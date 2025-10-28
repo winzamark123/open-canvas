@@ -183,17 +183,35 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Contact Us</CardTitle>
+                <CardTitle
+                  className="text-2xl"
+                  style={{
+                    fontFamily: "Alga",
+                  }}
+                >
+                  Contact Us
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Need help? Contact our support team and we'll get back to you
-                  as soon as possible.
+                  For all support inquiries, including billing issues, receipts,
+                  and general assistance, please email{" "}
+                  <a
+                    href="mailto:opencanvas@gmail.com"
+                    className="text-blue-500 underline"
+                  >
+                    opencanvas@gmail.com
+                  </a>
                 </p>
               </CardContent>
             </Card>
           </div>
         );
+
+      case "logout":
+        return(
+
+        )
 
       default:
         return null;
