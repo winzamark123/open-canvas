@@ -1626,7 +1626,7 @@ class App extends React.Component<AppProps, AppState> {
                             this.state.activeTool.type ===
                               this.state.preferredSelectionTool.type &&
                             !this.state.zenModeEnabled &&
-                            !this.scene.getElementsIncludingDeleted().length
+                            !this.scene.getNonDeletedElements().length
                           }
                           app={this}
                           isCollaborating={this.props.isCollaborating}
@@ -2816,7 +2816,10 @@ class App extends React.Component<AppProps, AppState> {
     const elements = this.scene.getElementsIncludingDeleted();
     const elementsMap = this.scene.getElementsMapIncludingDeleted();
 
-    if (!this.state.showWelcomeScreen && !this.scene.getNonDeletedElements().length) {
+    if (
+      !this.state.showWelcomeScreen &&
+      !this.scene.getNonDeletedElements().length
+    ) {
       this.setState({ showWelcomeScreen: true });
     }
 
