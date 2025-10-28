@@ -593,7 +593,7 @@ const ExcalidrawWrapper = () => {
       >
         <AppMainMenu
           theme={appTheme}
-          setTheme={(theme) => setAppTheme(theme)}
+          setTheme={setAppTheme}
           refresh={() => forceRefresh((prev) => !prev)}
         />
         <AppWelcomeScreen />
@@ -848,14 +848,7 @@ const ExcalidrawWrapper = () => {
                 );
               },
             },
-            {
-              ...CommandPalette.defaultItems.toggleTheme,
-              perform: () => {
-                setAppTheme(
-                  editorTheme === THEME.DARK ? THEME.LIGHT : THEME.DARK,
-                );
-              },
-            },
+            // Theme toggle removed - light mode only
             {
               label: t("labels.installPWA"),
               category: DEFAULT_CATEGORIES.app,

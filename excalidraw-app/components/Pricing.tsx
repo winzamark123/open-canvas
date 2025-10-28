@@ -1,4 +1,5 @@
 import React from "react";
+import { useUser, useAuth } from "@clerk/clerk-react";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ interface PricingTier {
   cta: string;
   popular?: boolean;
   borderColor?: string;
+  planName: string;
 }
 
 interface PricingProps {
@@ -41,6 +43,7 @@ const pricingTiers: PricingTier[] = [
     features: ["Basic drawing features", "Limited image generations"],
     cta: "Get Started",
     borderColor: "border-border",
+    planName: "free",
   },
   {
     name: "Standard",
@@ -54,6 +57,7 @@ const pricingTiers: PricingTier[] = [
     cta: "Upgrade to Standard",
     popular: true,
     borderColor: "border-primary",
+    planName: "standard",
   },
   {
     name: "Pro",
@@ -68,10 +72,86 @@ const pricingTiers: PricingTier[] = [
     ],
     cta: "Upgrade to Pro",
     borderColor: "border-rose-400",
+    planName: "pro",
   },
 ];
 
 export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
+  const { isSignedIn } = useUser();
+  const { getToken } = useAuth();
+  const [isLoading, setIsLoading] = React.useState<string | null>(null);
+
+  const handleUpgrade = async (tier: PricingTier) => {
+    // Free tier - just close the modal
+    if (tier.planName === "free") {
+      onClose();
+      return;
+    }
+
+    // Not signed in - redirect to sign in with return URL
+    if (!isSignedIn) {
+      // Store the plan they want to subscribe to
+      sessionStorage.setItem("pendingPlan", tier.planName);
+      // Clerk will automatically redirect back after sign in
+      window.location.href = `/sign-in?redirect_url=${encodeURIComponent(
+        "/?checkout=true",
+      )}`;
+      return;
+    }
+
+    // User is signed in - create checkout session
+    try {
+      setIsLoading(tier.planName);
+
+      const token = await getToken();
+      const response = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ planName: tier.planName }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create checkout session");
+      }
+
+      // Redirect to Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to start checkout. Please try again.",
+      );
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
+  // Check if user just signed in and wants to checkout
+  React.useEffect(() => {
+    if (isSignedIn) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const shouldCheckout = urlParams.get("checkout");
+      const pendingPlan = sessionStorage.getItem("pendingPlan");
+
+      if (shouldCheckout === "true" && pendingPlan) {
+        sessionStorage.removeItem("pendingPlan");
+        const tier = pricingTiers.find((t) => t.planName === pendingPlan);
+        if (tier) {
+          handleUpgrade(tier);
+        }
+      }
+    }
+  }, [isSignedIn]);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto p-10">
@@ -134,9 +214,10 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
                   <Button
                     className="w-full cursor-pointer"
                     variant={tier.popular ? "default" : "outline"}
-                    onClick={onClose}
+                    onClick={() => handleUpgrade(tier)}
+                    disabled={isLoading === tier.planName}
                   >
-                    {tier.cta}
+                    {isLoading === tier.planName ? "Loading..." : tier.cta}
                   </Button>
                 </CardFooter>
               </Card>

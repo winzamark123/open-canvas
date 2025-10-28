@@ -1,7 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   important: true,
-  darkMode: ["class"],
+  darkMode: false,
   content: [
     "./excalidraw-app/**/*.{ts,tsx}",
     "./packages/excalidraw/src/**/*.{ts,tsx}",
