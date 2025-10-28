@@ -2816,7 +2816,7 @@ class App extends React.Component<AppProps, AppState> {
     const elements = this.scene.getElementsIncludingDeleted();
     const elementsMap = this.scene.getElementsMapIncludingDeleted();
 
-    if (!this.state.showWelcomeScreen && !elements.length) {
+    if (!this.state.showWelcomeScreen && !this.scene.getNonDeletedElements().length) {
       this.setState({ showWelcomeScreen: true });
     }
 
