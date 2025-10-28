@@ -45,11 +45,7 @@ export const AppMainMenu: React.FC<{
         </MainMenu.Item>
       )}
       <MainMenu.Separator />
-      <MainMenu.DefaultItems.ToggleTheme
-        allowSystemTheme
-        theme={props.theme}
-        onSelect={props.setTheme}
-      />
+      {/* Theme toggle removed - light mode only */}
       <MainMenu.ItemCustom>
         <LanguageList style={{ width: "100%" }} />
       </MainMenu.ItemCustom>

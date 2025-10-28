@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth, SignOutButton } from "@clerk/clerk-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Progress } from "../ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { SignOutButton } from "@clerk/clerk-react";
 import { Sidebar, SidebarContent, SidebarItem } from "../ui/sidebar";
 import { BarChart3, CreditCard, Mail, LogOut } from "lucide-react";
 import { Billing } from "./Billing";
@@ -92,10 +91,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   };
 
   const handleSidebarItemClick = (id: TabId) => {
-    if (id === "logout") {
-      // Logout is handled separately via SignOutButton
-      return;
-    }
     setActiveTab(id);
   };
 
@@ -173,68 +168,53 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         );
       case "contact":
         return (
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle
-                  className="text-2xl"
-                  style={{
-                    fontFamily: "Alga",
-                  }}
+          <div className="p-4 flex flex-col gap-4">
+            <h2
+              className="text-3xl"
+              style={{
+                fontFamily: "Alga",
+              }}
+            >
+              Contact Us
+            </h2>
+            <div>
+              <p className="text-gray-600 dark:text-gray-400">
+                For all support inquiries, including billing issues, receipts,
+                and general assistance, please email{" "}
+                <a
+                  href="mailto:opencanvas@gmail.com"
+                  className="text-blue-500 underline"
                 >
-                  Contact Us
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 dark:text-gray-400">
-                  For all support inquiries, including billing issues, receipts,
-                  and general assistance, please email{" "}
-                  <a
-                    href="mailto:opencanvas@gmail.com"
-                    className="text-blue-500 underline"
-                  >
-                    opencanvas@gmail.com
-                  </a>
-                </p>
-              </CardContent>
-            </Card>
+                  opencanvas@gmail.com
+                </a>
+              </p>
+            </div>
           </div>
         );
 
       case "logout":
         return (
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle
-                  className="text-2xl"
-                  style={{
-                    fontFamily: "Alga",
-                  }}
-                >
-                  Contact Us
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 dark:text-gray-400">
-                  For all support inquiries, including billing issues, receipts,
-                  and general assistance, please email{" "}
-                  <a
-                    href="mailto:opencanvas@gmail.com"
-                    className="text-blue-500 underline"
-                  >
-                    opencanvas@gmail.com
-                  </a>
-                </p>
-              </CardContent>
-            </Card>
+          <div className="p-4 flex flex-col gap-4">
+            <h2
+              className="text-3xl"
+              style={{
+                fontFamily: "Alga",
+              }}
+            >
+              Logout
+            </h2>
+            <div className="space-y-4">
+              <p className="text-gray-600 dark:text-gray-400">
+                Are you sure you want to log out of your account?
+              </p>
+              <SignOutButton>
+                <button className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+                  Sign Out
+                </button>
+              </SignOutButton>
+            </div>
           </div>
         );
-
-      case "logout":
-        return(
-
-        )
 
       default:
         return null;
@@ -243,41 +223,50 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto p-10">
-        <DialogHeader>
-          <DialogTitle>Settings</DialogTitle>
-        </DialogHeader>
-
-        <div className="flex gap-6 mt-6">
-          <Sidebar>
-            <SidebarContent>
-              {sidebarItems.map((item) => {
-                const Icon = item.icon;
-                if (item.id === "logout") {
-                  return (
-                    <SignOutButton key={item.id}>
-                      <SidebarItem>
-                        <Icon className="h-5 w-5" />
+      <DialogContent className="sm:max-w-[1000px] h-[600px] max-h-[85vh] flex flex-col p-8">
+        <div className="flex flex-1 min-h-0">
+          <Sidebar className="flex-shrink-0 pr-4">
+            <SidebarContent className="p-0 h-full flex flex-col justify-between">
+              <div className="flex flex-col gap-2">
+                {sidebarItems
+                  .filter((item) => item.id !== "logout")
+                  .map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <SidebarItem
+                        key={item.id}
+                        isActive={activeTab === item.id}
+                        onClick={() => handleSidebarItemClick(item.id)}
+                      >
+                        <Icon className="h-4 w-4" />
                         {item.label}
                       </SidebarItem>
-                    </SignOutButton>
-                  );
-                }
-                return (
-                  <SidebarItem
-                    key={item.id}
-                    isActive={activeTab === item.id}
-                    onClick={() => handleSidebarItemClick(item.id)}
-                  >
-                    <Icon className="h-5 w-5" />
-                    {item.label}
-                  </SidebarItem>
-                );
-              })}
+                    );
+                  })}
+              </div>
+              <div className="flex flex-col gap-2">
+                {sidebarItems
+                  .filter((item) => item.id === "logout")
+                  .map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <SidebarItem
+                        key={item.id}
+                        isActive={activeTab === item.id}
+                        onClick={() => handleSidebarItemClick(item.id)}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {item.label}
+                      </SidebarItem>
+                    );
+                  })}
+              </div>
             </SidebarContent>
           </Sidebar>
 
-          <div className="flex-1 min-w-0">{renderContent()}</div>
+          <div className="flex-1 min-w-0 overflow-y-auto">
+            {renderContent()}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
