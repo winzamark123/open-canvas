@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { fal } from "@fal-ai/client";
-import { baseEdgeHandler } from "./lib/baseEdgeHandler.js";
+import { baseEdgeHandler } from "./_lib/baseEdgeHandler.js";
 
 async function editImageHandler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
