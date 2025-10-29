@@ -24,6 +24,10 @@ function ShadcnSignUp() {
                 card: "shadow-none bg-transparent",
                 formButtonPrimary: "bg-primary hover:bg-primary/90",
               },
+              layout: {
+                logoImageUrl:
+                  "https://www.opencanvas.studio/opencanvas-logo.png",
+              },
             }}
             signInUrl="/sign-in"
             routing="path"

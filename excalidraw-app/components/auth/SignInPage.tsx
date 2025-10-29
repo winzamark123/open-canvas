@@ -26,7 +26,7 @@ function ShadcnSignIn() {
               },
               layout: {
                 logoImageUrl:
-                  "https://www.opencanvas.studio/opencanvas-logo.svg",
+                  "https://www.opencanvas.studio/opencanvas-logo.png",
               },
             }}
             signUpUrl="/sign-up"
