@@ -1,5 +1,5 @@
 import React from "react";
-import { useUser, SignInButton, useAuth } from "@clerk/clerk-react";
+import { useUser, useAuth } from "@clerk/clerk-react";
 import { Header } from "@excalidraw/excalidraw/index";
 import { Button } from "./ui/button";
 import { Settings, LogOut, LogIn } from "lucide-react";
@@ -90,12 +90,13 @@ export const AppHeader = React.memo(() => {
               >
                 Pricing
               </Button>
-              <SignInButton mode="redirect">
-                <Button variant="outline">
-                  <LogIn className="size-4" />
-                  Log in
-                </Button>
-              </SignInButton>
+              <Button
+                variant="outline"
+                onClick={() => (window.location.href = "/sign-in")}
+              >
+                <LogIn className="size-4" />
+                Log in
+              </Button>
             </>
           )}
         </div>

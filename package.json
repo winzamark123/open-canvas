@@ -105,10 +105,12 @@
   },
   "dependencies": {
     "@clerk/clerk-react": "5.53.3",
+    "@clerk/themes": "2.4.30",
     "@fal-ai/client": "^1.7.0",
     "@upstash/redis": "1.35.6",
     "drizzle-orm": "0.44.7",
     "pg": "8.16.3",
+    "react-router-dom": "7.9.5",
     "svix": "^1.80.0",
     "tailwindcss": "4.1.14"
   }
