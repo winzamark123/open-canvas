@@ -3,6 +3,7 @@ import { verifyToken } from "@clerk/backend";
 import { db } from "./_db/index.js";
 import { users, userSubscriptions, plans, imageLogs } from "./_db/schema.js";
 import { eq, and, count, desc, gt } from "drizzle-orm";
+import { getUserUsage } from "./_lib/db-helpers.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") {
@@ -34,7 +35,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    // Get user from database
+    // Get user usage data (includes KV-cached count)
+    const userUsageData = await getUserUsage(clerkUserId);
+
+    // Get user from database for detailed queries
     const [user] = await db
       .select()
       .from(users)
@@ -45,7 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Get user's subscription and plan
+    // Get user's subscription and plan details
     const [subscription] = await db
       .select({
         planId: plans.id,
@@ -61,12 +65,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!subscription) {
       return res.status(404).json({ error: "No subscription found" });
     }
-
-    // Count user's image logs (generations and edits)
-    const [generationCount] = await db
-      .select({ count: count() })
-      .from(imageLogs)
-      .where(eq(imageLogs.userId, user.id));
 
     // Get recent image log events (last 100)
     const events = await db
@@ -106,7 +104,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       planName: subscription.planName,
       imageGenerationLimit: subscription.imageGenerationLimit,
-      imageGenerationsUsed: generationCount?.count || 0,
+      imageGenerationsUsed: userUsageData.usageCount, // From KV cache
       events: events.map((event) => ({
         id: event.id,
         date: event.createdAt,

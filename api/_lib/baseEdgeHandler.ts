@@ -101,9 +101,13 @@ export function baseEdgeHandler(config: BaseHandlerConfig) {
       await handler(req, res, context);
 
       // After successful response, log action for authenticated users (only if trackUsage is true)
-      if (userId && trackUsage) {
+      if (userId && clerkUserId && trackUsage) {
         // Non-blocking DB write (happens asynchronously within serverless timeout)
-        logImageAction({ userId, type: actionType }).catch((error) => {
+        logImageAction({
+          userId,
+          clerkId: clerkUserId,
+          type: actionType,
+        }).catch((error) => {
           console.error("Failed to log image action:", error);
           // Don't block the response if tracking fails
         });
