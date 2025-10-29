@@ -82,18 +82,24 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = React.useState<string | null>(null);
 
   const handleUpgrade = async (tier: PricingTier) => {
-    // Free tier - just close the modal
-    if (tier.planName === "free") {
-      onClose();
+    // Not signed in - redirect to sign in with return URL for all tiers
+    if (!isSignedIn) {
+      // For free tier, just redirect to home after sign in
+      // For paid tiers, pass the plan via URL parameter for checkout
+      const redirectUrl =
+        tier.planName === "free"
+          ? "/"
+          : `/?checkout=true&plan=${tier.planName}`;
+
+      window.location.href = `/sign-in?redirect_url=${encodeURIComponent(
+        redirectUrl,
+      )}`;
       return;
     }
 
-    // Not signed in - redirect to sign in with return URL
-    if (!isSignedIn) {
-      // Pass the plan via URL parameter for reliable tracking across redirects
-      window.location.href = `/sign-in?redirect_url=${encodeURIComponent(
-        `/?checkout=true&plan=${tier.planName}`,
-      )}`;
+    // Free tier - already signed in, just close the modal
+    if (tier.planName === "free") {
+      onClose();
       return;
     }
 
