@@ -1,5 +1,4 @@
 import React from "react";
-import { useUser, useAuth } from "@clerk/clerk-react";
 import {
   Dialog,
   DialogContent,
@@ -77,60 +76,17 @@ const pricingTiers: PricingTier[] = [
 ];
 
 export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
-  const { isSignedIn } = useUser();
-  const { getToken } = useAuth();
-  const [isLoading, setIsLoading] = React.useState<string | null>(null);
-
   const handleUpgrade = async (tier: PricingTier) => {
-    // Free tier - just close the modal
-    if (tier.planName === "free") {
-      onClose();
-      return;
-    }
+    // user will never be signed in at this point
+    // For free tier, just redirect to home after sign in
+    // For paid tiers, pass the plan via URL parameter for checkout
+    const redirectUrl =
+      tier.planName === "free" ? "/" : `/?checkout=true&plan=${tier.planName}`;
 
-    // Not signed in - redirect to sign in with return URL
-    if (!isSignedIn) {
-      // Pass the plan via URL parameter for reliable tracking across redirects
-      window.location.href = `/sign-in?redirect_url=${encodeURIComponent(
-        `/?checkout=true&plan=${tier.planName}`,
-      )}`;
-      return;
-    }
-
-    // User is signed in - create checkout session
-    try {
-      setIsLoading(tier.planName);
-
-      const token = await getToken();
-      const response = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ planName: tier.planName }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create checkout session");
-      }
-
-      // Redirect to Stripe Checkout
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      console.error("Error creating checkout session:", error);
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Failed to start checkout. Please try again.",
-      );
-    } finally {
-      setIsLoading(null);
-    }
+    window.location.href = `/sign-in?redirect_url=${encodeURIComponent(
+      redirectUrl,
+    )}`;
+    return;
   };
 
   return (
@@ -196,9 +152,8 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
                     className="w-full cursor-pointer"
                     variant={tier.popular ? "default" : "outline"}
                     onClick={() => handleUpgrade(tier)}
-                    disabled={isLoading === tier.planName}
                   >
-                    {isLoading === tier.planName ? "Loading..." : tier.cta}
+                    {tier.cta}
                   </Button>
                 </CardFooter>
               </Card>
