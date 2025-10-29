@@ -90,11 +90,9 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
 
     // Not signed in - redirect to sign in with return URL
     if (!isSignedIn) {
-      // Store the plan they want to subscribe to
-      sessionStorage.setItem("pendingPlan", tier.planName);
-      // Clerk will automatically redirect back after sign in
+      // Pass the plan via URL parameter for reliable tracking across redirects
       window.location.href = `/sign-in?redirect_url=${encodeURIComponent(
-        "/?checkout=true",
+        `/?checkout=true&plan=${tier.planName}`,
       )}`;
       return;
     }
@@ -134,23 +132,6 @@ export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
       setIsLoading(null);
     }
   };
-
-  // Check if user just signed in and wants to checkout
-  React.useEffect(() => {
-    if (isSignedIn) {
-      const urlParams = new URLSearchParams(window.location.search);
-      const shouldCheckout = urlParams.get("checkout");
-      const pendingPlan = sessionStorage.getItem("pendingPlan");
-
-      if (shouldCheckout === "true" && pendingPlan) {
-        sessionStorage.removeItem("pendingPlan");
-        const tier = pricingTiers.find((t) => t.planName === pendingPlan);
-        if (tier) {
-          handleUpgrade(tier);
-        }
-      }
-    }
-  }, [isSignedIn]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>

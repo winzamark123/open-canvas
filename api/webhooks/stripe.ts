@@ -3,8 +3,7 @@ import Stripe from "stripe";
 import { db } from "../_db/index.js";
 import { userSubscriptions, plans } from "../_db/schema.js";
 import { eq } from "drizzle-orm";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+import { getStripeClient } from "../_lib/stripe.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -19,6 +18,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    const stripe = getStripeClient();
+
     // Construct the event from the raw body and signature
     const event = stripe.webhooks.constructEvent(
       JSON.stringify(req.body),
@@ -46,6 +47,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         );
 
         // Check if user already has a subscription
+        // Note: Users should always have a subscription (created at signup with free plan)
+        // This event primarily handles plan upgrades/downgrades via checkout
         const [existingSubscription] = await db
           .select()
           .from(userSubscriptions)
@@ -53,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .limit(1);
 
         if (existingSubscription) {
-          // Update existing subscription
+          // Update existing subscription with new plan and Stripe details
           await db
             .update(userSubscriptions)
             .set({
@@ -65,9 +68,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             })
             .where(eq(userSubscriptions.userId, userId));
 
-          console.log(`Updated subscription for user ${userId}`);
+          console.log(
+            `Updated subscription for user ${userId} to plan ${planId}`,
+          );
         } else {
-          // Create new subscription
+          // Fallback: Create new subscription if somehow missing
+          // This should rarely happen since subscriptions are created at signup
           await db.insert(userSubscriptions).values({
             userId,
             planId,

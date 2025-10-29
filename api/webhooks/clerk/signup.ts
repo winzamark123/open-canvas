@@ -3,6 +3,7 @@ import { Webhook } from "svix";
 import { db } from "../../_db/index.js";
 import { users, plans, userSubscriptions } from "../../_db/schema.js";
 import { eq } from "drizzle-orm";
+import { getStripeClient } from "../../_lib/stripe.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -100,16 +101,78 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    if (!freePlan.stripePriceId) {
+      console.error("Free plan missing stripePriceId");
+      return res.status(500).json({
+        error: "Free plan not configured properly",
+        userId: newUser.id,
+      });
+    }
+
+    // Create Stripe customer and subscription
+    let stripeCustomerId: string | undefined;
+    let stripeSubscriptionId: string | undefined;
+
+    try {
+      const stripe = getStripeClient();
+      console.log("Creating Stripe customer for user:", { email, clerkId });
+
+      // Create Stripe customer
+      const customer = await stripe.customers.create({
+        email,
+        name: [firstName, lastName].filter(Boolean).join(" ") || undefined,
+        metadata: {
+          clerkId,
+          userId: newUser.id,
+        },
+      });
+
+      stripeCustomerId = customer.id;
+      console.log("Stripe customer created:", { customerId: customer.id });
+
+      // Create Stripe subscription
+      console.log("Creating Stripe subscription with free plan");
+      const subscription = await stripe.subscriptions.create({
+        customer: customer.id,
+        items: [
+          {
+            price: freePlan.stripePriceId,
+          },
+        ],
+        metadata: {
+          userId: newUser.id,
+          planId: freePlan.id,
+        },
+      });
+
+      stripeSubscriptionId = subscription.id;
+      console.log("Stripe subscription created:", {
+        subscriptionId: subscription.id,
+        status: subscription.status,
+      });
+    } catch (stripeError) {
+      console.error(
+        "Error creating Stripe customer/subscription:",
+        stripeError,
+      );
+      // Log the error but don't fail the signup - user was still created
+      // We'll just create the database subscription without Stripe IDs
+    }
+
     // Create user subscription with free plan
     await db.insert(userSubscriptions).values({
       userId: newUser.id,
       planId: freePlan.id,
       status: "active",
+      stripeCustomerId,
+      stripeSubscriptionId,
     });
 
     console.log("User subscription created:", {
       userId: newUser.id,
       planId: freePlan.id,
+      stripeCustomerId,
+      stripeSubscriptionId,
     });
 
     return res.status(200).json({
