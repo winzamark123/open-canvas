@@ -85,4 +85,5 @@ async function generateImageHandler(req: VercelRequest, res: VercelResponse) {
 export default baseEdgeHandler({
   handler: generateImageHandler,
   requireAuth: false,
+  actionType: "image_generation",
 });

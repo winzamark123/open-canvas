@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { verifyToken } from "@clerk/backend";
-import { getUserUsage, incrementImageGeneration } from "./db-helpers.js";
+import { getUserUsage, logImageAction } from "./db-helpers.js";
 
 export interface HandlerContext {
   userId?: string;
@@ -22,14 +22,16 @@ interface BaseHandlerConfig {
   requireAuth?: boolean;
   checkUsageLimits?: boolean;
   trackUsage?: boolean;
+  actionType?: "image_generation" | "image_edits";
 }
 
 /**
- * Base handler wrapper that handles authentication, checks usage limits, and tracks image generations
+ * Base handler wrapper that handles authentication, checks usage limits, and tracks image actions
  * @param handler - The main request handler function
  * @param requireAuth - Whether authentication is required (default: false)
  * @param checkUsageLimits - Whether to check image generation limits (default: true)
- * @param trackUsage - Whether to track image generation usage (default: true)
+ * @param trackUsage - Whether to track image action usage (default: true)
+ * @param actionType - The type of image action ("image_generation" or "image_edits")
  */
 export function baseEdgeHandler(config: BaseHandlerConfig) {
   const {
@@ -37,6 +39,7 @@ export function baseEdgeHandler(config: BaseHandlerConfig) {
     requireAuth = false,
     checkUsageLimits = true,
     trackUsage = true,
+    actionType = "image_generation",
   } = config;
 
   return async (req: VercelRequest, res: VercelResponse) => {
@@ -97,11 +100,11 @@ export function baseEdgeHandler(config: BaseHandlerConfig) {
       // Call the wrapped handler function with context
       await handler(req, res, context);
 
-      // After successful response, increment usage for authenticated users (only if trackUsage is true)
+      // After successful response, log action for authenticated users (only if trackUsage is true)
       if (userId && trackUsage) {
         // Non-blocking DB write (happens asynchronously within serverless timeout)
-        incrementImageGeneration(userId).catch((error) => {
-          console.error("Failed to increment image generation count:", error);
+        logImageAction({ userId, type: actionType }).catch((error) => {
+          console.error("Failed to log image action:", error);
           // Don't block the response if tracking fails
         });
       }

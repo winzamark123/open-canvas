@@ -1,10 +1,5 @@
 import { db } from "../_db/index.js";
-import {
-  users,
-  userSubscriptions,
-  plans,
-  imageGenerations,
-} from "../_db/schema.js";
+import { users, userSubscriptions, plans, imageLogs } from "../_db/schema.js";
 import { eq, and, count } from "drizzle-orm";
 
 export interface UserUsage {
@@ -44,11 +39,11 @@ export async function getUserUsage(clerkId: string): Promise<UserUsage> {
     throw new Error("No subscription found for user");
   }
 
-  // Count user's image generations
+  // Count user's image logs (generations and edits)
   const [generationCount] = await db
     .select({ count: count() })
-    .from(imageGenerations)
-    .where(eq(imageGenerations.userId, user.id));
+    .from(imageLogs)
+    .where(eq(imageLogs.userId, user.id));
 
   return {
     userId: user.id,
@@ -59,10 +54,17 @@ export async function getUserUsage(clerkId: string): Promise<UserUsage> {
 }
 
 /**
- * Insert new record in imageGenerations table
+ * Insert new record in imageLogs table
  */
-export async function incrementImageGeneration(userId: string): Promise<void> {
-  await db.insert(imageGenerations).values({
+export async function logImageAction({
+  userId,
+  type,
+}: {
+  userId: string;
+  type: "image_generation" | "image_edits";
+}): Promise<void> {
+  await db.insert(imageLogs).values({
     userId,
+    type,
   });
 }

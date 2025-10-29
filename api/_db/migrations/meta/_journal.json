@@ -15,6 +15,13 @@
       "when": 1761514666682,
       "tag": "0001_curvy_chameleon",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1761696113382,
+      "tag": "0002_icy_kang",
+      "breakpoints": true
     }
   ]
 }

@@ -1,13 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { verifyToken } from "@clerk/backend";
 import { db } from "./_db/index.js";
-import {
-  users,
-  userSubscriptions,
-  plans,
-  imageGenerations,
-} from "./_db/schema.js";
-import { eq, and, count } from "drizzle-orm";
+import { users, userSubscriptions, plans, imageLogs } from "./_db/schema.js";
+import { eq, and, count, desc, gt } from "drizzle-orm";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") {
@@ -67,21 +62,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: "No subscription found" });
     }
 
-    // Count user's image generations
+    // Count user's image logs (generations and edits)
     const [generationCount] = await db
       .select({ count: count() })
-      .from(imageGenerations)
-      .where(eq(imageGenerations.userId, user.id));
+      .from(imageLogs)
+      .where(eq(imageLogs.userId, user.id));
 
-    // Get recent image generation events (last 100)
+    // Get recent image log events (last 100)
     const events = await db
       .select({
-        id: imageGenerations.id,
-        createdAt: imageGenerations.createdAt,
+        id: imageLogs.id,
+        type: imageLogs.type,
+        createdAt: imageLogs.createdAt,
       })
-      .from(imageGenerations)
-      .where(eq(imageGenerations.userId, user.id))
-      .orderBy(desc(imageGenerations.createdAt))
+      .from(imageLogs)
+      .where(eq(imageLogs.userId, user.id))
+      .orderBy(desc(imageLogs.createdAt))
       .limit(100);
 
     // Get next plan (if not on premium)
@@ -96,7 +92,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           priceMonthly: plans.priceMonthly,
         })
         .from(plans)
-        .where(gt(plans.imageGenerationLimit, subscription.imageGenerationLimit))
+        .where(
+          gt(plans.imageGenerationLimit, subscription.imageGenerationLimit),
+        )
         .orderBy(plans.imageGenerationLimit)
         .limit(1);
 
@@ -112,7 +110,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       events: events.map((event) => ({
         id: event.id,
         date: event.createdAt,
-        type: "image_generation",
+        type: event.type,
       })),
       nextPlan: nextPlan
         ? {

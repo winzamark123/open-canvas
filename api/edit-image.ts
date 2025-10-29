@@ -119,4 +119,5 @@ async function editImageHandler(req: VercelRequest, res: VercelResponse) {
 export default baseEdgeHandler({
   handler: editImageHandler,
   requireAuth: false,
+  actionType: "image_edits",
 });

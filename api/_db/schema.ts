@@ -54,25 +54,30 @@ export const userSubscriptions = pgTable(
   }),
 );
 
-// Image generations tracking
-export const imageGenerations = pgTable(
-  "image_generations",
+// Image logs tracking (generations and edits)
+export const imageLogs = pgTable(
+  "image_logs",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    type: varchar("type", { length: 50 }).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
-    userCreatedIdx: index("user_created_idx").on(table.userId, table.createdAt),
+    userTypeCreatedIdx: index("user_type_created_idx").on(
+      table.userId,
+      table.type,
+      table.createdAt,
+    ),
   }),
 );
 
 // Relations for easier querying
 export const usersRelations = relations(users, ({ one, many }) => ({
   subscription: one(userSubscriptions),
-  imageGenerations: many(imageGenerations),
+  imageLogs: many(imageLogs),
 }));
 
 export const userSubscriptionsRelations = relations(
@@ -89,12 +94,9 @@ export const userSubscriptionsRelations = relations(
   }),
 );
 
-export const imageGenerationsRelations = relations(
-  imageGenerations,
-  ({ one }) => ({
-    user: one(users, {
-      fields: [imageGenerations.userId],
-      references: [users.id],
-    }),
+export const imageLogsRelations = relations(imageLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [imageLogs.userId],
+    references: [users.id],
   }),
-);
+}));
