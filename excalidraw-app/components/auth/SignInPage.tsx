@@ -1,81 +1,58 @@
 import { SignIn } from "@clerk/clerk-react";
 import { shadcn } from "@clerk/themes";
 import { Card, CardContent } from "../ui/card";
+import { FieldDescription } from "../ui/field";
 
 export function SignInPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-muted p-6 md:p-10">
-      <div className="w-full max-w-sm md:max-w-4xl">
-        <Card className="overflow-hidden">
-          <CardContent className="grid p-0 md:grid-cols-2">
-            <div className="flex flex-col gap-6 p-6 md:p-8">
-              <div className="flex flex-col items-center gap-2 text-center">
-                <a
-                  href="/"
-                  className="flex items-center gap-2 self-center font-medium"
-                >
-                  <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 256 256"
-                      className="size-4"
-                    >
-                      <rect width="256" height="256" fill="none" />
-                      <line
-                        x1="208"
-                        y1="128"
-                        x2="128"
-                        y2="208"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="32"
-                      />
-                      <line
-                        x1="192"
-                        y1="40"
-                        x2="40"
-                        y2="192"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="32"
-                      />
-                    </svg>
-                  </div>
-                  Open Canvas
-                </a>
-                <h1 className="text-2xl font-bold">Welcome back</h1>
-                <p className="text-balance text-muted-foreground">
-                  Sign in to your Open Canvas account
-                </p>
-              </div>
-              <SignIn
-                appearance={{
-                  theme: shadcn,
-                  elements: {
-                    rootBox: "w-full",
-                    card: "shadow-none bg-transparent",
-                    formButtonPrimary: "bg-primary hover:bg-primary/90",
-                  },
-                }}
-                signUpUrl="/sign-up"
-                routing="path"
-                path="/sign-in"
-              />
+      <ShadcnSignIn />
+    </div>
+  );
+}
+
+function ShadcnSignIn() {
+  return (
+    <div className="flex flex-col gap-6">
+      <Card className="overflow-hidden p-0 border-none">
+        <CardContent className="grid p-0 md:grid-cols-2">
+          <SignIn
+            appearance={{
+              theme: shadcn,
+              elements: {
+                rootBox: "w-full",
+                card: "shadow-none bg-transparent",
+                formButtonPrimary: "bg-primary hover:bg-primary/90",
+              },
+              layout: {
+                logoImageUrl:
+                  "https://www.opencanvas.studio/opencanvas-logo.svg",
+              },
+            }}
+            signUpUrl="/sign-up"
+            routing="path"
+            path="/sign-in"
+          />
+          <div className="bg-muted relative hidden md:block">
+            <div className="h-full w-full bg-white flex items-center justify-center">
+              <svg
+                id="opencanvas-logo"
+                data-name="opencanvas-logo"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="-250 0 764.71 258"
+                fill="currentColor"
+                style={{ width: "auto", height: "auto" }}
+              >
+                <path d="M106.74,79.58s-9.67,2.65-17.18,8.97c-18.62,15.67-20.49,55.26-4.48,75.78,18.77,24.05,51.89,6.79,69.74,23.18,13.04,11.97,13.08,47.48.17,59.42-12.62,11.67-47,11.45-58.67-1.82-14.64-16.64-.81-45.34-18.51-65.39-19.76-22.39-58.27-2.6-72.51-26.72-7.9-13.38-7.51-43.74,4.85-54.54,16.04-14.01,45.14-1.5,64.51-17.58,23.36-19.39,4.83-56.53,24.89-71.64,14.12-10.64,38.48-13.29,53.73-.17,17.47,15.03,16.59,44.98,3.92,58.37-6.12,6.47-14.83,8.9-17.74,9.71-13.01,3.62-19.6-1.16-32.72,2.44Z" />
+              </svg>
             </div>
-            <div className="relative hidden bg-muted md:block">
-              <img
-                src="/og-image-3.png"
-                alt="Open Canvas"
-                className="absolute inset-0 size-full object-cover dark:brightness-[0.2] dark:grayscale"
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
+      <FieldDescription className="px-6 text-center">
+        By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
+        and <a href="#">Privacy Policy</a>.
+      </FieldDescription>
     </div>
   );
 }
