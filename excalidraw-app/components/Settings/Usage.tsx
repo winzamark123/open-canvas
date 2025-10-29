@@ -12,6 +12,7 @@ import {
 } from "../ui/table";
 import { SettingsContent } from "./SettingsContent";
 import { ArrowRight } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface Event {
   id: string;
@@ -68,32 +69,12 @@ export const Usage: React.FC<UsageProps> = ({
     onUpgrade?.();
   };
 
-  if (loading) {
-    return (
-      <SettingsContent title="Usage">
-        <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500">Loading...</div>
-        </div>
-      </SettingsContent>
-    );
-  }
-
-  if (error) {
-    return (
-      <SettingsContent title="Usage">
-        <div className="rounded-md bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-200">
-          {error}
-        </div>
-      </SettingsContent>
-    );
-  }
-
   if (!usageData) {
     return null;
   }
 
   return (
-    <SettingsContent title="Usage">
+    <SettingsContent title="Usage" loading={loading} error={error}>
       <div className="space-y-6">
         {/* Top Grid Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -148,7 +129,10 @@ export const Usage: React.FC<UsageProps> = ({
                     </div>
                   </div>
                 </div>
-                <Button onClick={handleUpgradeClick} className="w-full">
+                <Button
+                  className="w-full cursor-pointer"
+                  onClick={handleUpgradeClick}
+                >
                   Upgrade Now
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>

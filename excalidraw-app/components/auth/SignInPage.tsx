@@ -32,6 +32,8 @@ function ShadcnSignIn() {
             signUpUrl="/sign-up"
             routing="path"
             path="/sign-in"
+            afterSignInUrl="/"
+            afterSignUpUrl="/"
           />
           <div className="bg-muted relative hidden md:block">
             <div className="h-full w-full bg-white flex items-center justify-center">

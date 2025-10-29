@@ -32,6 +32,8 @@ function ShadcnSignUp() {
             signInUrl="/sign-in"
             routing="path"
             path="/sign-up"
+            afterSignInUrl="/"
+            afterSignUpUrl="/"
           />
           <div className="bg-muted relative hidden md:block">
             <img
