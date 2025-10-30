@@ -1,9 +1,17 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
+import { buffer } from "micro";
 import { db } from "../_db/index.js";
 import { userSubscriptions, plans } from "../_db/schema.js";
 import { eq } from "drizzle-orm";
 import { getStripeClient } from "../_lib/stripe.js";
+
+// Disable body parsing to get raw body for webhook signature verification
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -20,14 +28,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const stripe = getStripeClient();
 
-    // Construct the event from the raw body and signature
-    const event = stripe.webhooks.constructEvent(
-      JSON.stringify(req.body),
-      sig,
-      webhookSecret,
-    );
+    // Use micro's buffer function to get raw body
+    const rawBody = await buffer(req);
 
-    console.log(`Received Stripe webhook: ${event.type}`);
+    // Construct the event from the raw body and signature
+    const event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
 
     // Handle different event types
     switch (event.type) {

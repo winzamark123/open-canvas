@@ -28,7 +28,6 @@ export async function getUserUsage(clerkId: string): Promise<UserUsage> {
       // Cache hit - we can skip the count query to DB
       usageCount = cachedCount;
       cacheHit = true;
-      console.log(`[KV] Cache hit for clerkId ${clerkId}: ${usageCount}`);
     }
   } catch (error) {
     // If KV fails, we'll fallback to DB query below

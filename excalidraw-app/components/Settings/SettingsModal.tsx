@@ -101,8 +101,52 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     setActiveTab(id);
   };
 
-  const handleUpgradeClick = () => {
-    console.log("Upgrade button clicked");
+  const handleUpgradeClick = async () => {
+    if (!usageData?.nextPlan) {
+      console.error("No next plan available");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const token = await getToken();
+      if (!token) {
+        throw new Error("No authentication token");
+      }
+
+      // Create checkout session
+      const response = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          planName: usageData.nextPlan.name,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create checkout session");
+      }
+
+      const { url } = await response.json();
+
+      // Redirect to Stripe checkout
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err) {
+      console.error("Error creating checkout session:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to start checkout process",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderContent = () => {
