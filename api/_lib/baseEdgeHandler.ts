@@ -52,49 +52,56 @@ export function baseEdgeHandler(config: BaseHandlerConfig) {
       // Parse request to get Clerk session token (from Authorization header)
       const authHeader = req.headers.authorization;
 
-      if (authHeader && authHeader.startsWith("Bearer ")) {
-        const token = authHeader.substring(7);
-
-        try {
-          // Verify token with Clerk
-          const claims = await verifyToken(token, {
-            secretKey: process.env.CLERK_SECRET_KEY,
-          });
-          clerkUserId = claims.sub;
-
-          if (clerkUserId) {
-            // Query DB for user's plan and current usage count
-            userUsage = await getUserUsage(clerkUserId);
-            userId = userUsage.userId;
-
-            console.log("userUsage", userUsage);
-
-            // Check if usage reaches the maximum limit (only if checkUsageLimits is true)
-            if (checkUsageLimits && userUsage.usageCount >= userUsage.limit) {
-              return res.status(403).json({
-                error: "Usage limit reached, please upgrade your plan",
-                details: {
-                  usageCount: userUsage.usageCount,
-                  limit: userUsage.limit,
-                  planName: userUsage.planName,
-                },
-              });
-            }
-
-            // Populate context with user information
-            context.userId = userId;
-            context.clerkUserId = clerkUserId;
-            context.userUsage = userUsage;
-          }
-        } catch (error) {
-          console.error("Token verification or DB query failed:", error);
-          // If authentication fails but not required, continue as anonymous
+      // Only proceed with auth/KV checks if auth is required OR an auth header is provided
+      if (requireAuth || (authHeader && authHeader.startsWith("Bearer "))) {
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+          // Auth is required but no valid header provided
           if (requireAuth) {
-            return res.status(401).json({ error: "Invalid token" });
+            return res.status(401).json({ error: "Unauthorized" });
+          }
+        } else {
+          const token = authHeader.substring(7);
+
+          try {
+            // Verify token with Clerk
+            const claims = await verifyToken(token, {
+              secretKey: process.env.CLERK_SECRET_KEY,
+            });
+            clerkUserId = claims.sub;
+
+            if (clerkUserId) {
+              // Query DB for user's plan and current usage count
+              userUsage = await getUserUsage(clerkUserId);
+              userId = userUsage.userId;
+
+              console.log("userUsage", userUsage);
+
+              // Check if usage reaches the maximum limit (only if checkUsageLimits is true)
+              if (checkUsageLimits && userUsage.usageCount >= userUsage.limit) {
+                return res.status(403).json({
+                  error: "Usage limit reached, please upgrade your plan",
+                  details: {
+                    usageCount: userUsage.usageCount,
+                    limit: userUsage.limit,
+                    planName: userUsage.planName,
+                  },
+                });
+              }
+
+              // Populate context with user information
+              context.userId = userId;
+              context.clerkUserId = clerkUserId;
+              context.userUsage = userUsage;
+            }
+          } catch (error) {
+            console.error("Token verification or DB query failed:", error);
+            // If authentication fails but is required, return error
+            if (requireAuth) {
+              return res.status(401).json({ error: "Invalid token" });
+            }
+            // Otherwise continue as anonymous
           }
         }
-      } else if (requireAuth) {
-        return res.status(401).json({ error: "Unauthorized" });
       }
 
       // Call the wrapped handler function with context

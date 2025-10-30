@@ -144,15 +144,13 @@ export const Usage: React.FC<UsageProps> = ({
           {/* Premium Plan Message */}
           {!usageData.nextPlan && (
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg text-black">
-                  Premium Member
-                </CardTitle>
-              </CardHeader>
               <CardContent>
+                <h2 className="text-lg font-semibold text-black">
+                  Premium Member
+                </h2>
                 <p className="text-black">
-                  You're on the highest plan with maximum benefits. Thank you
-                  for your support!
+                  Please contact us if you would like to upgrade to an
+                  Enterprise plan.
                 </p>
               </CardContent>
             </Card>
