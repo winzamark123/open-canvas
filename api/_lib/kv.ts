@@ -7,11 +7,9 @@ let kvClient: Redis | null = null;
  */
 export function getKVClient(): Redis {
   if (!kvClient) {
-    kvClient = new Redis({
-      url: process.env.KV_REST_API_URL!,
-      token: process.env.KV_REST_API_TOKEN!,
-    });
+    kvClient = Redis.fromEnv();
   }
+  console.log("kvClient");
   return kvClient;
 }
 

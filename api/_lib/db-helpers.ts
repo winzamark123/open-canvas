@@ -1,6 +1,6 @@
 import { db } from "../_db/index.js";
 import { users, userSubscriptions, plans, imageLogs } from "../_db/schema.js";
-import { eq, and, count } from "drizzle-orm";
+import { eq, and, count, ConsoleLogWriter } from "drizzle-orm";
 import { getKVClient, KV_KEYS } from "./kv.js";
 
 export interface UserUsage {
@@ -60,6 +60,8 @@ export async function getUserUsage(clerkId: string): Promise<UserUsage> {
     throw new Error("No subscription found for user");
   }
 
+  console.log("cache", usageCount);
+
   // If cache miss, query DB for count and populate cache
   if (!cacheHit) {
     console.log(`[KV] Cache miss for clerkId ${clerkId}, querying DB`);
@@ -102,20 +104,26 @@ export async function logImageAction({
   clerkId: string;
   type: "image_generation" | "image_edits";
 }): Promise<void> {
-  // Insert into database
-  await db.insert(imageLogs).values({
-    userId,
-    type,
-  });
-
   // Update KV cache (write-through) using clerkId
   try {
     const kv = getKVClient();
-    const newCount = await kv.incr(KV_KEYS.userUsage(clerkId));
+    const newCount = await kv.incr(`user_usage:${clerkId}`);
     console.log(`[KV] Cache incremented for clerkId ${clerkId}: ${newCount}`);
   } catch (error) {
     // Log error but don't fail the request if KV update fails
     console.error("[KV] Error incrementing cache:", error);
     // Cache will be repopulated on next read (eventual consistency)
+  }
+
+  // Insert into database
+  try {
+    const result = await db.insert(imageLogs).values({
+      userId,
+      type,
+    });
+    console.log("inserted into db", result);
+  } catch (error) {
+    console.error("[DB] Error inserting image log:", error);
+    throw error;
   }
 }

@@ -47,7 +47,6 @@ export const Usage: React.FC<UsageProps> = ({
   error = null,
   onUpgrade,
 }) => {
-  console.log(usageData);
   const getProgressPercentage = () => {
     if (!usageData) return 0;
     return (

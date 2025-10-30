@@ -104,21 +104,28 @@ export function baseEdgeHandler(config: BaseHandlerConfig) {
         }
       }
 
-      // Call the wrapped handler function with context
-      await handler(req, res, context);
+      console.log("userId", userId);
+      console.log("clerkUserId", clerkUserId);
+      console.log("trackUsage", trackUsage);
 
       // After successful response, log action for authenticated users (only if trackUsage is true)
       if (userId && clerkUserId && trackUsage) {
-        // Non-blocking DB write (happens asynchronously within serverless timeout)
-        logImageAction({
-          userId,
-          clerkId: clerkUserId,
-          type: actionType,
-        }).catch((error) => {
+        // Wait for DB write and KV increment to complete
+        console.log("logging image action");
+        try {
+          await logImageAction({
+            userId,
+            clerkId: clerkUserId,
+            type: actionType,
+          });
+        } catch (error) {
           console.error("Failed to log image action:", error);
-          // Don't block the response if tracking fails
-        });
+          // Don't fail the request if tracking fails
+        }
       }
+
+      // Call the wrapped handler function with context
+      await handler(req, res, context);
     } catch (error) {
       // If handler threw an error, don't increment usage
       console.error("Handler error:", error);
