@@ -1,4 +1,5 @@
 import React from "react";
+import { useAuth } from "@clerk/clerk-react";
 import {
   Dialog,
   DialogContent,
@@ -76,17 +77,65 @@ const pricingTiers: PricingTier[] = [
 ];
 
 export const Pricing: React.FC<PricingProps> = ({ isOpen, onClose }) => {
-  const handleUpgrade = async (tier: PricingTier) => {
-    // user will never be signed in at this point
-    // For free tier, just redirect to home after sign in
-    // For paid tiers, pass the plan via URL parameter for checkout
-    const redirectUrl =
-      tier.planName === "free" ? "/" : `/?checkout=true&plan=${tier.planName}`;
+  const { getToken, isSignedIn } = useAuth();
 
-    window.location.href = `/sign-in?redirect_url=${encodeURIComponent(
-      redirectUrl,
-    )}`;
-    return;
+  const handleUpgrade = async (tier: PricingTier) => {
+    // Free plan: redirect to sign-in
+    if (tier.planName === "free") {
+      const redirectUrl = "/";
+      window.location.href = `/sign-in?redirect_url=${encodeURIComponent(
+        redirectUrl,
+      )}`;
+      return;
+    }
+
+    // Paid plans: need authentication
+    if (!isSignedIn) {
+      // Redirect to sign-in first, then handle checkout
+      const redirectUrl = `/?checkout=true&plan=${tier.planName}`;
+      window.location.href = `/sign-in?redirect_url=${encodeURIComponent(
+        redirectUrl,
+      )}`;
+      return;
+    }
+
+    // User is signed in, get payment link from API
+    try {
+      const token = await getToken();
+      if (!token) {
+        throw new Error("No authentication token");
+      }
+
+      const response = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ planName: tier.planName }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create checkout session");
+      }
+
+      const result = await response.json();
+
+      // Redirect to Stripe payment link
+      if (result.url) {
+        window.location.href = result.url;
+      } else {
+        throw new Error("No checkout URL received from server");
+      }
+    } catch (error) {
+      console.error("Error handling plan upgrade:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to upgrade plan. Please try again.",
+      );
+    }
   };
 
   return (

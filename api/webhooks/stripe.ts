@@ -1,10 +1,14 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
-import { buffer } from "micro";
 import { db } from "../_db/index.js";
-import { userSubscriptions, plans } from "../_db/schema.js";
+import { userSubscriptions, plans, users } from "../_db/schema.js";
 import { eq } from "drizzle-orm";
+import getRawBody from "raw-body";
 import { getStripeClient } from "../_lib/stripe.js";
+import { getKVClient, KV_KEYS } from "../_lib/kv.js";
+import type { KVUsageData } from "../_lib/db-helpers.js";
+import { getCurrentMonth } from "../_lib/db-helpers.js";
+import { getUserUsage } from "../_lib/db-helpers.js";
 
 // Disable body parsing to get raw body for webhook signature verification
 export const config = {
@@ -12,6 +16,476 @@ export const config = {
     bodyParser: false,
   },
 };
+
+/**
+ * Get clerkId from userId, using provided clerkId if available
+ */
+async function getClerkId(
+  userId: string,
+  clerkId?: string,
+): Promise<string | null> {
+  if (clerkId) return clerkId;
+
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return user?.clerkId || null;
+}
+
+/**
+ * Update KV cache with new plan limit while preserving usage count
+ */
+async function updateKVCacheWithPlanLimit(
+  clerkId: string,
+  planLimit: number,
+): Promise<void> {
+  try {
+    const kv = getKVClient();
+    const key = KV_KEYS.userUsage(clerkId);
+    const currentMonth = getCurrentMonth();
+
+    const cachedData = await kv.get<KVUsageData>(key);
+
+    if (cachedData && cachedData.month === currentMonth) {
+      // Cache exists and month matches - update plan limit while preserving usage
+      const updatedData: KVUsageData = {
+        current_usage: cachedData.current_usage,
+        plan_limit: planLimit,
+        month: currentMonth,
+      };
+      await kv.set(key, updatedData);
+      console.log(
+        `[KV] Updated plan limit for clerkId ${clerkId}: ${planLimit}`,
+      );
+    } else {
+      // Cache doesn't exist or month changed - get current usage and update
+      const userUsage = await getUserUsage(clerkId);
+
+      const kvData: KVUsageData = {
+        current_usage: userUsage.usageCount,
+        plan_limit: planLimit,
+        month: currentMonth,
+      };
+      await kv.set(key, kvData);
+      console.log(
+        `[KV] Created/updated cache for clerkId ${clerkId} with plan limit: ${planLimit}`,
+      );
+    }
+  } catch (error) {
+    // Log error but don't fail the webhook if KV update fails
+    console.error("[KV] Error updating cache with plan limit:", error);
+    // Cache will be repopulated on next read (eventual consistency)
+  }
+}
+
+/**
+ * Handle checkout.session.completed event
+ */
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  const stripeCustomerId = session.customer as string;
+
+  if (!stripeCustomerId) {
+    throw new Error("Missing customer ID in checkout session");
+  }
+
+  // Identify user by Stripe customer ID
+  let [existingSubscription] = await db
+    .select({
+      userId: userSubscriptions.userId,
+      planId: userSubscriptions.planId,
+    })
+    .from(userSubscriptions)
+    .where(eq(userSubscriptions.stripeCustomerId, stripeCustomerId))
+    .limit(1);
+
+  // Fallback: if customer ID doesn't match, try to find by customer email
+  if (!existingSubscription && session.customer_email) {
+    const [userByEmail] = await db
+      .select({
+        id: users.id,
+      })
+      .from(users)
+      .where(eq(users.email, session.customer_email))
+      .limit(1);
+
+    if (userByEmail) {
+      const [subscriptionByUser] = await db
+        .select({
+          userId: userSubscriptions.userId,
+          planId: userSubscriptions.planId,
+        })
+        .from(userSubscriptions)
+        .where(eq(userSubscriptions.userId, userByEmail.id))
+        .limit(1);
+
+      if (subscriptionByUser) {
+        existingSubscription = subscriptionByUser;
+      }
+    }
+  }
+
+  // If still no subscription found, try to use metadata from checkout session
+  let finalUserId: string;
+  if (!existingSubscription) {
+    const userIdFromMetadata = session.metadata?.userId;
+    if (userIdFromMetadata) {
+      // Verify user exists
+      const [user] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.id, userIdFromMetadata))
+        .limit(1);
+
+      if (user) {
+        finalUserId = user.id;
+        console.log(
+          `No existing subscription found, will create new one for user ${finalUserId} from checkout metadata`,
+        );
+      } else {
+        throw new Error(
+          `User not found for userId ${userIdFromMetadata} from checkout metadata`,
+        );
+      }
+    } else {
+      throw new Error(
+        `User subscription not found for Stripe customer ${stripeCustomerId} and no userId in metadata`,
+      );
+    }
+  } else {
+    finalUserId = existingSubscription.userId;
+  }
+
+  // Get plan from line items (price ID) and match to database plan
+  const stripe = getStripeClient();
+  const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+    limit: 1,
+  });
+
+  if (!lineItems.data || lineItems.data.length === 0) {
+    throw new Error("No line items found in checkout session");
+  }
+
+  const priceId = lineItems.data[0].price?.id;
+  if (!priceId) {
+    throw new Error("No price ID found in line items");
+  }
+
+  // Find plan by stripePriceId
+  const [planByPriceId] = await db
+    .select()
+    .from(plans)
+    .where(eq(plans.stripePriceId, priceId))
+    .limit(1);
+
+  if (!planByPriceId) {
+    throw new Error(`Plan not found for price ID ${priceId}`);
+  }
+
+  const finalPlanId = planByPriceId.id;
+  console.log(
+    `Checkout completed for user ${finalUserId}, plan ${finalPlanId}, subscription ${session.subscription}`,
+  );
+
+  // Get plan details
+  const [plan] = await db
+    .select()
+    .from(plans)
+    .where(eq(plans.id, finalPlanId))
+    .limit(1);
+
+  if (!plan) {
+    throw new Error(`Plan ${finalPlanId} not found`);
+  }
+
+  // Get existing subscription to check if this is an upgrade
+  const [userSubscription] = await db
+    .select({
+      id: userSubscriptions.id,
+      planId: userSubscriptions.planId,
+      stripeSubscriptionId: userSubscriptions.stripeSubscriptionId,
+    })
+    .from(userSubscriptions)
+    .where(eq(userSubscriptions.userId, finalUserId))
+    .limit(1);
+
+  // If user has an existing subscription with a different plan, cancel the old one
+  if (
+    userSubscription &&
+    userSubscription.stripeSubscriptionId &&
+    userSubscription.planId !== finalPlanId &&
+    userSubscription.stripeSubscriptionId !== session.subscription
+  ) {
+    try {
+      console.log(
+        `Cancelling old subscription ${userSubscription.stripeSubscriptionId} for user ${finalUserId}`,
+      );
+      await stripe.subscriptions.cancel(userSubscription.stripeSubscriptionId);
+      console.log(
+        `Successfully cancelled old subscription ${userSubscription.stripeSubscriptionId}`,
+      );
+    } catch (cancelError) {
+      // Log error but don't fail the webhook - new subscription is already created
+      console.error(
+        `Error cancelling old subscription ${userSubscription.stripeSubscriptionId}:`,
+        cancelError,
+      );
+    }
+  }
+
+  // Update or create subscription
+  if (userSubscription) {
+    await db
+      .update(userSubscriptions)
+      .set({
+        planId: finalPlanId,
+        stripeSubscriptionId: session.subscription as string,
+        stripeCustomerId: stripeCustomerId,
+        status: "active",
+        updatedAt: new Date(),
+      })
+      .where(eq(userSubscriptions.userId, finalUserId));
+
+    console.log(
+      `Updated subscription for user ${finalUserId} to plan ${finalPlanId}`,
+    );
+  } else {
+    await db.insert(userSubscriptions).values({
+      userId: finalUserId,
+      planId: finalPlanId,
+      stripeSubscriptionId: session.subscription as string,
+      stripeCustomerId: stripeCustomerId,
+      status: "active",
+    });
+
+    console.log(`Created new subscription for user ${finalUserId}`);
+  }
+
+  // Update KV cache
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, finalUserId))
+    .limit(1);
+
+  if (user) {
+    await updateKVCacheWithPlanLimit(user.clerkId, plan.imageGenerationLimit);
+  } else {
+    console.warn(
+      `Could not find user for userId ${finalUserId}, skipping KV update`,
+    );
+  }
+}
+
+/**
+ * Handle customer.subscription.updated event
+ */
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  console.log(`Subscription updated: ${subscription.id}`);
+
+  // Get the price ID from the subscription
+  const priceId = subscription.items.data[0]?.price?.id;
+  if (!priceId) {
+    throw new Error("No price ID found in subscription");
+  }
+
+  // Find plan by stripePriceId
+  const [planByPriceId] = await db
+    .select()
+    .from(plans)
+    .where(eq(plans.stripePriceId, priceId))
+    .limit(1);
+
+  if (!planByPriceId) {
+    throw new Error(`Plan not found for price ID ${priceId}`);
+  }
+
+  const newPlanId = planByPriceId.id;
+
+  // Get user subscription by stripeSubscriptionId
+  const [userSubscription] = await db
+    .select({
+      id: userSubscriptions.id,
+      userId: userSubscriptions.userId,
+      planId: userSubscriptions.planId,
+      stripeSubscriptionId: userSubscriptions.stripeSubscriptionId,
+    })
+    .from(userSubscriptions)
+    .where(eq(userSubscriptions.stripeSubscriptionId, subscription.id))
+    .limit(1);
+
+  if (!userSubscription) {
+    // Subscription not found - this shouldn't happen, but log it
+    console.log(
+      `Subscription ${subscription.id} not found in database - may need to be created`,
+    );
+    return; // Early return - can't process further
+  }
+
+  const finalUserId = userSubscription.userId;
+
+  // Check if plan changed
+  if (userSubscription.planId === newPlanId) {
+    // Plan hasn't changed, just update subscription metadata if needed
+    console.log(
+      `Subscription ${subscription.id} plan unchanged, no action needed`,
+    );
+    return;
+  }
+
+  console.log(
+    `Plan changed for subscription ${subscription.id}: ${userSubscription.planId} -> ${newPlanId}`,
+  );
+
+  // Get plan details
+  const [plan] = await db
+    .select()
+    .from(plans)
+    .where(eq(plans.id, newPlanId))
+    .limit(1);
+
+  if (!plan) {
+    throw new Error(`Plan ${newPlanId} not found`);
+  }
+
+  const stripe = getStripeClient();
+  const customerId = subscription.customer as string;
+  if (!customerId) {
+    throw new Error("Missing customer ID in subscription");
+  }
+
+  // For portal updates, Stripe already updated the subscription in place.
+  // To ensure no proration and immediate charge (similar to checkout flow),
+  // we cancel the current subscription and create a new one with the new price.
+  try {
+    // Cancel the subscription that Stripe just updated
+    console.log(
+      `Cancelling subscription ${subscription.id} for user ${finalUserId} to charge for new plan without proration`,
+    );
+    await stripe.subscriptions.cancel(subscription.id);
+    console.log(`Successfully cancelled subscription ${subscription.id}`);
+
+    // Create a new subscription with the new price (immediate charge, no proration)
+    const newSubscription = await stripe.subscriptions.create({
+      customer: customerId,
+      items: [
+        {
+          price: priceId,
+        },
+      ],
+      metadata: {
+        userId: finalUserId,
+        planId: newPlanId,
+        planName: plan.name,
+      },
+    });
+
+    console.log(
+      `Created new subscription ${newSubscription.id} for user ${finalUserId} with plan ${newPlanId}`,
+    );
+
+    // Update database with new subscription ID
+    await db
+      .update(userSubscriptions)
+      .set({
+        planId: newPlanId,
+        stripeSubscriptionId: newSubscription.id,
+        stripeCustomerId: customerId,
+        status: "active",
+        updatedAt: new Date(),
+      })
+      .where(eq(userSubscriptions.userId, finalUserId));
+
+    // Update KV cache
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, finalUserId))
+      .limit(1);
+
+    if (user) {
+      await updateKVCacheWithPlanLimit(user.clerkId, plan.imageGenerationLimit);
+    } else {
+      console.warn(
+        `Could not find user for userId ${finalUserId}, skipping KV update`,
+      );
+    }
+  } catch (error) {
+    console.error(
+      `Error processing subscription update for user ${finalUserId}:`,
+      error,
+    );
+    throw error;
+  }
+}
+
+/**
+ * Handle customer.subscription.deleted event
+ */
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  console.log(`Subscription deleted: ${subscription.id}`);
+
+  // Get free plan
+  const [freePlan] = await db
+    .select()
+    .from(plans)
+    .where(eq(plans.name, "free"))
+    .limit(1);
+
+  if (!freePlan) {
+    throw new Error("Free plan not found");
+  }
+
+  // Get user subscription
+  const [userSubscription] = await db
+    .select()
+    .from(userSubscriptions)
+    .where(eq(userSubscriptions.stripeSubscriptionId, subscription.id))
+    .limit(1);
+
+  if (!userSubscription) {
+    // Subscription not found - this is okay, it might have been deleted already
+    // or it was a test subscription that never existed in our DB
+    console.log(
+      `Subscription ${subscription.id} not found in database - may have been deleted already or never existed`,
+    );
+    return; // Early return - no need to process further
+  }
+
+  // Update subscription to free tier (no Stripe subscription, but keep customer ID for future purchases)
+  await db
+    .update(userSubscriptions)
+    .set({
+      status: "active",
+      planId: freePlan.id,
+      stripeSubscriptionId: null, // Clear Stripe subscription ID since free tier doesn't have one
+      // Keep stripeCustomerId for future subscriptions
+      updatedAt: new Date(),
+    })
+    .where(eq(userSubscriptions.stripeSubscriptionId, subscription.id));
+
+  console.log(`Downgraded subscription ${subscription.id} to free tier`);
+
+  // Update KV cache
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userSubscription.userId))
+    .limit(1);
+
+  if (user) {
+    await updateKVCacheWithPlanLimit(
+      user.clerkId,
+      freePlan.imageGenerationLimit,
+    );
+  } else {
+    console.warn(
+      `Could not find user for subscription ${subscription.id}, skipping KV update`,
+    );
+  }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -28,123 +502,54 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const stripe = getStripeClient();
 
-    // Use micro's buffer function to get raw body
-    const rawBody = await buffer(req);
+    // Read raw body as Buffer from request stream
+    const body = await buffer(req);
 
     // Construct the event from the raw body and signature
-    const event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+    const event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
 
     // Handle different event types
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-
-        // Get metadata from session
-        const { userId, planId } = session.metadata!;
-
-        if (!userId || !planId) {
-          console.error("Missing userId or planId in session metadata");
-          return res.status(400).json({ error: "Missing metadata" });
+        try {
+          await handleCheckoutCompleted(session);
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+          console.error("Error handling checkout completion:", errorMessage);
+          return res.status(400).json({ error: errorMessage });
         }
-
-        console.log(
-          `Checkout completed for user ${userId}, plan ${planId}, subscription ${session.subscription}`,
-        );
-
-        // Check if user already has a subscription
-        // Note: Users should always have a subscription (created at signup with free plan)
-        // This event primarily handles plan upgrades/downgrades via checkout
-        const [existingSubscription] = await db
-          .select()
-          .from(userSubscriptions)
-          .where(eq(userSubscriptions.userId, userId))
-          .limit(1);
-
-        if (existingSubscription) {
-          // Update existing subscription with new plan and Stripe details
-          await db
-            .update(userSubscriptions)
-            .set({
-              planId,
-              stripeSubscriptionId: session.subscription as string,
-              stripeCustomerId: session.customer as string,
-              status: "active",
-              updatedAt: new Date(),
-            })
-            .where(eq(userSubscriptions.userId, userId));
-
-          console.log(
-            `Updated subscription for user ${userId} to plan ${planId}`,
-          );
-        } else {
-          // Fallback: Create new subscription if somehow missing
-          // This should rarely happen since subscriptions are created at signup
-          await db.insert(userSubscriptions).values({
-            userId,
-            planId,
-            stripeSubscriptionId: session.subscription as string,
-            stripeCustomerId: session.customer as string,
-            status: "active",
-          });
-
-          console.log(`Created new subscription for user ${userId}`);
-        }
-
         break;
       }
 
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
-
-        console.log(`Subscription updated: ${subscription.id}`);
-
-        // Update subscription status
-        // Note: current_period_start/end don't exist on Subscription object
-        // They're on SubscriptionItems. We can derive period info from billing_cycle_anchor if needed
-        await db
-          .update(userSubscriptions)
-          .set({
-            status: subscription.status,
-            updatedAt: new Date(),
-          })
-          .where(eq(userSubscriptions.stripeSubscriptionId, subscription.id));
-
-        console.log(
-          `Updated subscription status to ${subscription.status} for ${subscription.id}`,
-        );
-
+        try {
+          await handleSubscriptionUpdated(subscription);
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+          console.error("Error handling subscription update:", errorMessage);
+          return res.status(400).json({ error: errorMessage });
+        }
         break;
       }
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
+        try {
+          await handleSubscriptionDeleted(subscription);
+          // Return 200 even if subscription wasn't found (it's already deleted)
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+          console.error("Error handling subscription deletion:", errorMessage);
 
-        console.log(`Subscription deleted: ${subscription.id}`);
-
-        // Get the free plan
-        const [freePlan] = await db
-          .select()
-          .from(plans)
-          .where(eq(plans.name, "free"))
-          .limit(1);
-
-        if (!freePlan) {
-          console.error("Free plan not found");
-          return res.status(500).json({ error: "Free plan not found" });
+          // Only return 500 for unexpected errors, not "not found" cases
+          // (handleSubscriptionDeleted now handles "not found" gracefully)
+          return res.status(500).json({ error: errorMessage });
         }
-
-        // Update subscription to cancelled and downgrade to free plan
-        await db
-          .update(userSubscriptions)
-          .set({
-            status: "cancelled",
-            planId: freePlan.id,
-            updatedAt: new Date(),
-          })
-          .where(eq(userSubscriptions.stripeSubscriptionId, subscription.id));
-
-        console.log(`Downgraded subscription ${subscription.id} to free plan`);
-
         break;
       }
 
@@ -160,4 +565,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: error instanceof Error ? error.message : "Unknown error",
     });
   }
+}
+
+// Helper function to read raw body as Buffer
+function buffer(req: VercelRequest): Promise<Buffer> {
+  return new Promise<Buffer>((resolve, reject) => {
+    const chunks: Buffer[] = [];
+
+    req.on("data", (chunk: Buffer) => {
+      chunks.push(chunk);
+    });
+
+    req.on("end", () => {
+      resolve(Buffer.concat(chunks));
+    });
+
+    req.on("error", reject);
+  });
 }

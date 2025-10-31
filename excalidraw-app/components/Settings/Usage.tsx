@@ -12,7 +12,6 @@ import {
 } from "../ui/table";
 import { SettingsContent } from "./SettingsContent";
 import { ArrowRight } from "lucide-react";
-import { Loader2 } from "lucide-react";
 
 interface Event {
   id: string;

@@ -11,8 +11,7 @@ import {
 import { SettingsContent } from "./SettingsContent";
 import { cn } from "../../lib/utils";
 
-// Mock invoice data - replace with Stripe integration later
-interface Invoice {
+export interface Invoice {
   id: string;
   date: string;
   description: string;
@@ -22,38 +21,20 @@ interface Invoice {
   invoiceUrl?: string;
 }
 
-const mockInvoices: Invoice[] = [
-  {
-    id: "1",
-    date: "Sep 09, 2025",
-    description: "Cursor Usage for August 2025",
-    status: "Paid",
-    amount: 0.0,
-    currency: "USD",
-    invoiceUrl: "#",
-  },
-  {
-    id: "2",
-    date: "Sep 09, 2025",
-    description: "Cursor Usage for July 2025",
-    status: "Paid",
-    amount: 0.0,
-    currency: "USD",
-    invoiceUrl: "#",
-  },
-];
-
 interface BillingProps {
   invoices?: Invoice[];
+  loading?: boolean;
+  error?: string | null;
   onManageSubscription?: () => void;
 }
 
 export const Billing: React.FC<BillingProps> = ({
-  invoices = mockInvoices,
+  invoices = [],
+  loading = false,
+  error = null,
   onManageSubscription,
 }) => {
   const handleManageSubscription = () => {
-    // TODO: Implement subscription management with Stripe
     onManageSubscription?.();
   };
 
@@ -73,17 +54,24 @@ export const Billing: React.FC<BillingProps> = ({
   return (
     <SettingsContent
       title="Invoices"
+      loading={loading}
+      error={error}
       action={
-        <Button onClick={handleManageSubscription} variant="outline">
+        <Button
+          onClick={handleManageSubscription}
+          variant="outline"
+          disabled={loading}
+          className="cursor-pointer"
+        >
           Manage Subscription
         </Button>
       }
     >
-      {invoices.length === 0 ? (
+      {!loading && !error && invoices.length === 0 ? (
         <div className="py-12 text-center">
           <p className="text-sm text-muted-foreground">No invoices found.</p>
         </div>
-      ) : (
+      ) : !loading && !error ? (
         <Table>
           <TableHeader>
             <TableRow>
@@ -137,7 +125,7 @@ export const Billing: React.FC<BillingProps> = ({
             ))}
           </TableBody>
         </Table>
-      )}
+      ) : null}
     </SettingsContent>
   );
 };

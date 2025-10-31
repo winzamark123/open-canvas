@@ -9,7 +9,6 @@ export function getKVClient(): Redis {
   if (!kvClient) {
     kvClient = Redis.fromEnv();
   }
-  console.log("kvClient");
   return kvClient;
 }
 

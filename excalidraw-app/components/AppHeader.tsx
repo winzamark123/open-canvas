@@ -12,7 +12,7 @@ export const AppHeader = React.memo(() => {
   const [isPricingModalOpen, setIsPricingModalOpen] = React.useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = React.useState(false);
 
-  // Handle post-signup checkout
+  // Handle post-signup plan upgrade
   React.useEffect(() => {
     if (isSignedIn) {
       const urlParams = new URLSearchParams(window.location.search);
@@ -23,44 +23,64 @@ export const AppHeader = React.memo(() => {
         // Clean up URL params first
         window.history.replaceState({}, "", window.location.pathname);
 
-        // Trigger checkout
-        const initiateCheckout = async () => {
+        // Check user's subscription status and choose appropriate endpoint
+        const handlePlanUpgrade = async () => {
           try {
             const token = await getToken();
-            const response = await fetch(
-              "/api/stripe/create-checkout-session",
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ planName: pendingPlan }),
+
+            // First, fetch user's subscription status
+            const usageResponse = await fetch("/api/user-usage", {
+              headers: {
+                Authorization: `Bearer ${token}`,
               },
-            );
+            });
 
-            const data = await response.json();
-
-            if (!response.ok) {
-              throw new Error(
-                data.error || "Failed to create checkout session",
-              );
+            if (!usageResponse.ok) {
+              throw new Error("Failed to fetch user subscription status");
             }
 
-            if (data.url) {
-              window.location.href = data.url;
+            const usageData = await usageResponse.json();
+            const hasStripeSubscription = usageData.hasStripeSubscription;
+
+            if (hasStripeSubscription) {
+              // dont do anything, user should upgrade from the settings modal
+            } else {
+              // Fallback: Use checkout for users without Stripe subscription
+              const response = await fetch(
+                "/api/stripe/create-checkout-session",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({ planName: pendingPlan }),
+                },
+              );
+
+              const data = await response.json();
+
+              if (!response.ok) {
+                throw new Error(
+                  data.error || "Failed to create checkout session",
+                );
+              }
+
+              if (data.url) {
+                window.location.href = data.url;
+              }
             }
           } catch (error) {
-            console.error("Error creating checkout session:", error);
+            console.error("Error handling plan upgrade:", error);
             alert(
               error instanceof Error
                 ? error.message
-                : "Failed to start checkout. Please try again.",
+                : "Failed to upgrade plan. Please try again.",
             );
           }
         };
 
-        initiateCheckout();
+        handlePlanUpgrade();
       }
     }
   }, [isSignedIn, getToken]);

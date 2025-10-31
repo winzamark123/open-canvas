@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { useAuth, SignOutButton } from "@clerk/clerk-react";
+import { useAuth, useUser, SignOutButton } from "@clerk/clerk-react";
 import { Dialog, DialogContent } from "../ui/dialog";
 import { Sidebar, SidebarContent, SidebarItem } from "../ui/sidebar";
+import { Invoice } from "./Billing";
 import {
   BarChart3,
   CreditCard,
@@ -56,10 +57,14 @@ const sidebarItems: SidebarItem[] = [
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { getToken } = useAuth();
+  const { user } = useUser();
   const [usageData, setUsageData] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("usage");
+  const [billingData, setBillingData] = useState<Invoice[]>([]);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -97,6 +102,44 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     fetchUsageData();
   }, [isOpen, getToken]);
 
+  useEffect(() => {
+    if (!isOpen || activeTab !== "billing") return;
+
+    const fetchBillingData = async () => {
+      setBillingLoading(true);
+      setBillingError(null);
+
+      try {
+        const token = await getToken();
+        if (!token) {
+          throw new Error("No authentication token");
+        }
+
+        const response = await fetch("/api/billing/invoices", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch billing data");
+        }
+
+        const data = await response.json();
+        setBillingData(data.invoices || []);
+      } catch (err) {
+        console.error("Error fetching billing data:", err);
+        setBillingError(
+          err instanceof Error ? err.message : "Failed to load billing data",
+        );
+      } finally {
+        setBillingLoading(false);
+      }
+    };
+
+    fetchBillingData();
+  }, [isOpen, activeTab, getToken]);
+
   const handleSidebarItemClick = (id: TabId) => {
     setActiveTab(id);
   };
@@ -114,38 +157,80 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         throw new Error("No authentication token");
       }
 
-      // Create checkout session
       const response = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          planName: usageData.nextPlan.name,
-        }),
+        body: JSON.stringify({ planName: usageData.nextPlan.name }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create checkout session");
+        throw new Error(errorData.error || "Failed to update subscription");
       }
 
-      const { url } = await response.json();
+      const result = await response.json();
 
-      // Redirect to Stripe checkout
-      if (url) {
-        window.location.href = url;
-      } else {
-        throw new Error("No checkout URL returned");
+      // Redirect to Stripe checkout page
+      if (result.url) {
+        window.location.href = result.url;
+        return; // Exit early since we're redirecting
       }
+
+      // If no URL, show error
+      throw new Error("No checkout URL received from server");
     } catch (err) {
-      console.error("Error creating checkout session:", err);
+      console.error("Error updating subscription:", err);
       setError(
-        err instanceof Error ? err.message : "Failed to start checkout process",
+        err instanceof Error ? err.message : "Failed to update subscription",
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      setBillingLoading(true);
+      setBillingError(null);
+
+      const token = await getToken();
+      if (!token) {
+        throw new Error("No authentication token");
+      }
+
+      const response = await fetch("/api/stripe/create-portal-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create portal session");
+      }
+
+      const result = await response.json();
+
+      // Redirect to Stripe billing portal
+      if (result.url) {
+        window.location.href = result.url;
+        return; // Exit early since we're redirecting
+      }
+
+      // If no URL, show error
+      throw new Error("No portal URL received from server");
+    } catch (err) {
+      console.error("Error creating portal session:", err);
+      setBillingError(
+        err instanceof Error ? err.message : "Failed to open billing portal",
+      );
+    } finally {
+      setBillingLoading(false);
     }
   };
 
@@ -164,10 +249,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       case "billing":
         return (
           <Billing
-            onManageSubscription={() => {
-              // TODO: Integrate with Stripe billing portal
-              console.log("Manage subscription clicked");
-            }}
+            invoices={billingData}
+            loading={billingLoading}
+            error={billingError}
+            onManageSubscription={handleManageSubscription}
           />
         );
       case "contact":

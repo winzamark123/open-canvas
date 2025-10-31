@@ -13,31 +13,28 @@ async function seed() {
           name: "free",
           imageGenerationLimit: 10,
           priceMonthly: "0",
-          stripePriceId:
-            process.env.NODE_ENV === "production"
-              ? null
-              : "price_1SN4FgLgrX5PSXCR5KGaPth4", // Add real Stripe price ID later
+          stripePriceId: null,
         },
         {
           name: "standard",
           imageGenerationLimit: 60,
           priceMonthly: "5",
           stripePriceId:
-            process.env.NODE_ENV === "production"
-              ? null
-              : "price_1SMDNHLgrX5PSXCRdSqJn1D3", // Add real Stripe price ID later
+            process.env.STRIPE_STANDARD_PRICE_ID ||
+            "price_1SON4BLgrX5PSXCRDAQaK9gq",
         },
         {
           name: "pro",
           imageGenerationLimit: 150, // -1 = unlimited
           priceMonthly: "11",
           stripePriceId:
-            process.env.NODE_ENV === "production"
-              ? null
-              : "price_1SMDNHLgrX5PSXCRnsoQ25a8", // Add real Stripe price ID later
+            process.env.STRIPE_PRO_PRICE_ID || "price_1SON4YLgrX5PSXCRLkunuhKk",
         },
       ])
       .onConflictDoNothing();
+
+    const planCount = await db.select().from(plans);
+    console.log(`Plans in database: ${planCount.length}`);
 
     console.log("✅ Database seeded successfully!");
   } catch (error) {

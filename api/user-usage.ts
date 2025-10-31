@@ -1,52 +1,25 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { verifyToken } from "@clerk/backend";
 import { db } from "./_db/index.js";
-import { users, userSubscriptions, plans, imageLogs } from "./_db/schema.js";
-import { eq, and, count, desc, gt } from "drizzle-orm";
-import { getUserUsage } from "./_lib/db-helpers.js";
+import { userSubscriptions, plans, imageLogs } from "./_db/schema.js";
+import { getCurrentMonthBoundaries } from "./_lib/db-helpers.js";
+import { eq, and, desc, gt, gte, lt } from "drizzle-orm";
+import {
+  baseEdgeHandler,
+  type HandlerContext,
+} from "./_lib/baseEdgeHandler.js";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function userUsageHandler(
+  req: VercelRequest,
+  res: VercelResponse,
+  context: HandlerContext,
+) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    // Get the authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    const token = authHeader.substring(7);
-
-    // Verify the session token with Clerk
-    let clerkUserId: string;
-    try {
-      const claims = await verifyToken(token, {
-        secretKey: process.env.CLERK_SECRET_KEY,
-      });
-      clerkUserId = claims.sub;
-
-      if (!clerkUserId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-    } catch (error) {
-      console.error("Token verification failed:", error);
-      return res.status(401).json({ error: "Invalid token" });
-    }
-
-    // Get user usage data (includes KV-cached count)
-    const userUsageData = await getUserUsage(clerkUserId);
-
-    // Get user from database for detailed queries
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.clerkId, clerkUserId))
-      .limit(1);
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+    if (!context.userUsage) {
+      return res.status(404).json({ error: "User usage data not found" });
     }
 
     // Get user's subscription and plan details
@@ -56,17 +29,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         planName: plans.name,
         imageGenerationLimit: plans.imageGenerationLimit,
         priceMonthly: plans.priceMonthly,
+        stripeSubscriptionId: userSubscriptions.stripeSubscriptionId,
       })
       .from(userSubscriptions)
       .innerJoin(plans, eq(userSubscriptions.planId, plans.id))
-      .where(eq(userSubscriptions.userId, user.id))
+      .where(eq(userSubscriptions.userId, context.userId))
       .limit(1);
 
     if (!subscription) {
       return res.status(404).json({ error: "No subscription found" });
     }
 
-    // Get recent image log events (last 100)
+    // Get recent image log events for current month (last 100)
+    const { startOfMonth, endOfMonth } = getCurrentMonthBoundaries();
     const events = await db
       .select({
         id: imageLogs.id,
@@ -74,7 +49,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         createdAt: imageLogs.createdAt,
       })
       .from(imageLogs)
-      .where(eq(imageLogs.userId, user.id))
+      .where(
+        and(
+          eq(imageLogs.userId, context.userId),
+          gte(imageLogs.createdAt, startOfMonth),
+          lt(imageLogs.createdAt, endOfMonth),
+        ),
+      )
       .orderBy(desc(imageLogs.createdAt))
       .limit(100);
 
@@ -104,7 +85,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       planName: subscription.planName,
       imageGenerationLimit: subscription.imageGenerationLimit,
-      imageGenerationsUsed: userUsageData.usageCount, // From KV cache
+      imageGenerationsUsed: context.userUsage.usageCount, // From KV cache
+      hasStripeSubscription: !!subscription.stripeSubscriptionId, // Flag to determine if user has active Stripe subscription
       events: events.map((event) => ({
         id: event.id,
         date: event.createdAt,
@@ -126,3 +108,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 }
+
+// Wrap handler with baseEdgeHandler for authentication
+// No usage limits or tracking needed for viewing usage data
+export default baseEdgeHandler({
+  handler: userUsageHandler,
+  requireAuth: true,
+  checkUsageLimits: false,
+  trackUsage: false,
+});

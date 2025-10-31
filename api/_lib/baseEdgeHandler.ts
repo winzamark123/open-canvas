@@ -3,8 +3,8 @@ import { verifyToken } from "@clerk/backend";
 import { getUserUsage, logImageAction } from "./db-helpers.js";
 
 export interface HandlerContext {
-  userId?: string;
-  clerkUserId?: string;
+  userId: string;
+  clerkUserId: string;
   userUsage?: {
     userId: string;
     usageCount: number;
@@ -17,7 +17,7 @@ interface BaseHandlerConfig {
   handler: (
     req: VercelRequest,
     res: VercelResponse,
-    context?: HandlerContext,
+    context: HandlerContext,
   ) => Promise<void | VercelResponse>;
   requireAuth?: boolean;
   checkUsageLimits?: boolean;
@@ -46,37 +46,67 @@ export function baseEdgeHandler(config: BaseHandlerConfig) {
     let userId: string | null = null;
     let clerkUserId: string | null = null;
     let userUsage: HandlerContext["userUsage"] | undefined;
-    const context: HandlerContext = {};
 
     try {
       // Parse request to get Clerk session token (from Authorization header)
       const authHeader = req.headers.authorization;
 
-      // Only proceed with auth/KV checks if auth is required OR an auth header is provided
-      if (requireAuth || (authHeader && authHeader.startsWith("Bearer "))) {
+      // If auth is required, enforce it
+      if (requireAuth) {
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
-          // Auth is required but no valid header provided
-          if (requireAuth) {
-            return res.status(401).json({ error: "Unauthorized" });
+          return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        const token = authHeader.substring(7);
+
+        try {
+          // Verify token with Clerk
+          const claims = await verifyToken(token, {
+            secretKey: process.env.CLERK_SECRET_KEY,
+          });
+          clerkUserId = claims.sub;
+
+          if (!clerkUserId) {
+            return res.status(401).json({ error: "Invalid token" });
           }
-        } else {
+
+          // Query DB for user's plan and current usage count
+          userUsage = await getUserUsage(clerkUserId);
+          userId = userUsage.userId;
+
+          console.log("userUsage", userUsage);
+
+          // Check if usage reaches the maximum limit (only if checkUsageLimits is true)
+          if (checkUsageLimits && userUsage.usageCount >= userUsage.limit) {
+            return res.status(403).json({
+              error: "Usage limit reached, please upgrade your plan",
+              details: {
+                usageCount: userUsage.usageCount,
+                limit: userUsage.limit,
+                planName: userUsage.planName,
+              },
+            });
+          }
+        } catch (error) {
+          console.error("Token verification or DB query failed:", error);
+          return res.status(401).json({ error: "Invalid token" });
+        }
+      } else {
+        // Optional auth: try to authenticate if header is provided
+        if (authHeader && authHeader.startsWith("Bearer ")) {
           const token = authHeader.substring(7);
 
           try {
-            // Verify token with Clerk
             const claims = await verifyToken(token, {
               secretKey: process.env.CLERK_SECRET_KEY,
             });
             clerkUserId = claims.sub;
 
             if (clerkUserId) {
-              // Query DB for user's plan and current usage count
               userUsage = await getUserUsage(clerkUserId);
               userId = userUsage.userId;
 
-              console.log("userUsage", userUsage);
-
-              // Check if usage reaches the maximum limit (only if checkUsageLimits is true)
+              // Check usage limits if checkUsageLimits is true
               if (checkUsageLimits && userUsage.usageCount >= userUsage.limit) {
                 return res.status(403).json({
                   error: "Usage limit reached, please upgrade your plan",
@@ -87,31 +117,29 @@ export function baseEdgeHandler(config: BaseHandlerConfig) {
                   },
                 });
               }
-
-              // Populate context with user information
-              context.userId = userId;
-              context.clerkUserId = clerkUserId;
-              context.userUsage = userUsage;
             }
           } catch (error) {
             console.error("Token verification or DB query failed:", error);
-            // If authentication fails but is required, return error
-            if (requireAuth) {
-              return res.status(401).json({ error: "Invalid token" });
-            }
-            // Otherwise continue as anonymous
+            // Continue as anonymous if auth fails but not required
           }
         }
       }
 
-      console.log("userId", userId);
-      console.log("clerkUserId", clerkUserId);
-      console.log("trackUsage", trackUsage);
+      // When requireAuth is true, userId and clerkUserId must be set
+      if (requireAuth && (!userId || !clerkUserId)) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Create context - use empty strings as fallback for non-auth handlers
+      const context: HandlerContext = {
+        userId: userId || "",
+        clerkUserId: clerkUserId || "",
+        userUsage,
+      };
 
       // After successful response, log action for authenticated users (only if trackUsage is true)
       if (userId && clerkUserId && trackUsage) {
         // Wait for DB write and KV increment to complete
-        console.log("logging image action");
         try {
           await logImageAction({
             userId,
