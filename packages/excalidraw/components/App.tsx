@@ -331,6 +331,7 @@ import {
   copyTextToSystemClipboard,
   parseClipboard,
   parseDataTransferEvent,
+  serializeAsClipboardJSON,
   type ParsedDataTransferFile,
 } from "../clipboard";
 
@@ -3008,6 +3009,104 @@ class App extends React.Component<AppProps, AppState> {
 
   // Copy/paste
 
+  /**
+   * Copy image elements as binary data to clipboard
+   * Also includes Excalidraw element data so pasting back into Excalidraw
+   * can reuse existing files instead of uploading new ones
+   */
+  private copyImagesAsBinary = async (
+    imageElements: ExcalidrawImageElement[],
+  ): Promise<void> => {
+    if (!imageElements.length) {
+      return;
+    }
+
+    let copiedCount = 0;
+    let lastPngBlob: Blob | null = null;
+
+    // Convert each image to PNG blob
+    // For multiple images, we'll copy the last one as binary
+    for (const imageElement of imageElements) {
+      if (!isInitializedImageElement(imageElement)) {
+        continue;
+      }
+
+      const fileId = imageElement.fileId;
+      if (!fileId) {
+        continue;
+      }
+
+      const fileData = this.files[fileId];
+      if (!fileData) {
+        continue;
+      }
+
+      // Convert data URL to blob
+      const blob = await (await fetch(fileData.dataURL)).blob();
+
+      // Convert to PNG if needed (for better clipboard support)
+      let pngBlob = blob;
+      if (blob.type !== "image/png") {
+        // Create an image element to convert the blob to PNG
+        const img = new Image();
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = fileData.dataURL;
+        });
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+
+        pngBlob = await new Promise<Blob>((resolve) => {
+          canvas.toBlob((blob) => resolve(blob!), "image/png");
+        });
+      }
+
+      lastPngBlob = pngBlob;
+      copiedCount++;
+    }
+
+    if (copiedCount === 0 || !lastPngBlob) {
+      throw new Error("No images could be copied");
+    }
+
+    // Get the element data for Excalidraw pasting
+    const elementsToCopy = this.scene.getSelectedElements({
+      selectedElementIds: this.state.selectedElementIds,
+      includeBoundTextElement: true,
+      includeElementsInFrames: true,
+    });
+
+    const elementDataText = serializeAsClipboardJSON({
+      elements: elementsToCopy,
+      files: this.files,
+    });
+
+    // Create a Blob for the text data
+    const textBlob = new Blob([elementDataText], { type: "text/plain" });
+
+    // Copy both image and element data in a single clipboard operation
+    // When pasting into Excalidraw, it will find the element data and reuse files
+    // When pasting into other apps (Figma, etc.), they will only see the image data
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        "image/png": lastPngBlob,
+        "text/plain": textBlob,
+      }),
+    ]);
+
+    const message =
+      copiedCount === 1
+        ? "Image copied to clipboard!"
+        : `${copiedCount} images copied to clipboard!`;
+    this.setToast({ message });
+  };
+
   private onCut = withBatchedUpdates((event: ClipboardEvent) => {
     const isExcalidrawActive = this.excalidrawContainerRef.current?.contains(
       document.activeElement,
@@ -3020,13 +3119,44 @@ class App extends React.Component<AppProps, AppState> {
     event.stopPropagation();
   });
 
-  private onCopy = withBatchedUpdates((event: ClipboardEvent) => {
+  private onCopy = withBatchedUpdates(async (event: ClipboardEvent) => {
     const isExcalidrawActive = this.excalidrawContainerRef.current?.contains(
       document.activeElement,
     );
     if (!isExcalidrawActive || isWritableElement(event.target)) {
       return;
     }
+
+    // Check if only images are selected
+    const selectedElements = this.scene.getSelectedElements({
+      selectedElementIds: this.state.selectedElementIds,
+      includeBoundTextElement: false,
+      includeElementsInFrames: false,
+    });
+
+    // If we have selected elements and all are images, copy as binary
+    if (
+      selectedElements.length > 0 &&
+      selectedElements.every((el) => isImageElement(el))
+    ) {
+      const imageElements = selectedElements as ExcalidrawImageElement[];
+      try {
+        await this.copyImagesAsBinary(imageElements);
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      } catch (error: any) {
+        // If copying as binary fails, fall back to default behavior
+        console.error("Failed to copy images as binary:", error);
+        this.setToast({
+          message: error.message || "Failed to copy images",
+          type: "error",
+        });
+        // Fall through to default copy behavior
+      }
+    }
+
+    // Default behavior: copy as Excalidraw elements
     this.actionManager.executeAction(actionCopy, "keyboard", event);
     event.preventDefault();
     event.stopPropagation();
