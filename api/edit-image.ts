@@ -11,10 +11,6 @@ async function editImageHandler(req: VercelRequest, res: VercelResponse) {
     const {
       prompt,
       images,
-      image_size = "square_hd",
-      num_images = 1,
-      max_images = 1,
-      enable_safety_checker = true,
     } = req.body;
 
     if (!prompt || typeof prompt !== "string") {
@@ -41,7 +37,7 @@ async function editImageHandler(req: VercelRequest, res: VercelResponse) {
       credentials: apiKey,
     });
 
-    // Process images: upload files or use dataURLs directly
+    // Process images: fal.ai supports dataURLs directly, so pass them through
     const imageUrls: string[] = [];
 
     for (const imageData of images) {
@@ -68,15 +64,11 @@ async function editImageHandler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Call fal.ai Seedream v4 Edit API
-    const result = await fal.run("fal-ai/bytedance/seedream/v4/edit", {
+    // Call fal.ai Flux Pro Kontext Max Multi API
+    const result = await fal.run("fal-ai/flux-pro/kontext/max/multi", {
       input: {
         prompt,
-        image_urls: imageUrls,
-        image_size,
-        num_images,
-        max_images,
-        enable_safety_checker,
+        images: imageUrls,
       },
     });
 
@@ -105,7 +97,6 @@ async function editImageHandler(req: VercelRequest, res: VercelResponse) {
     res.json({
       success: true,
       imageData: `data:${mimeType};base64,${base64Image}`,
-      seed: result.data.seed,
     });
   } catch (error) {
     console.error("Error editing image:", error);
