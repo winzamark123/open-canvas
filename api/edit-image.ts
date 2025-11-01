@@ -37,27 +37,13 @@ async function editImageHandler(req: VercelRequest, res: VercelResponse) {
       credentials: apiKey,
     });
 
-    // Process images: upload to fal storage
+    // Process images: fal.ai supports dataURLs directly, so pass them through
     const imageUrls: string[] = [];
 
     for (const imageData of images) {
       if (typeof imageData === "string") {
-        // Check if it's a dataURL or a URL
-        if (imageData.startsWith("data:")) {
-          // Convert dataURL to Blob and upload to fal storage
-          const base64Data = imageData.split(",")[1] || imageData;
-          const mimeMatch = imageData.match(/data:([^;]+);/);
-          const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
-          const byteCharacters = Buffer.from(base64Data, "base64");
-          const blob = new Blob([byteCharacters], { type: mimeType });
-
-          // Upload to fal storage
-          const uploadedUrl = await fal.storage.upload(blob);
-          imageUrls.push(uploadedUrl);
-        } else {
-          // Already a URL, use directly
-          imageUrls.push(imageData);
-        }
+        // Already a dataURL or URL, use directly
+        imageUrls.push(imageData);
       } else if (imageData.data && imageData.type) {
         // File-like object with base64 data, convert to Blob and upload
         const base64Data = imageData.data.split(",")[1] || imageData.data;
