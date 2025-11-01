@@ -111,7 +111,6 @@ async function editImageHandler(req: VercelRequest, res: VercelResponse) {
     res.json({
       success: true,
       imageData: `data:${mimeType};base64,${base64Image}`,
-      ...(result.data.seed && { seed: result.data.seed }),
     });
   } catch (error) {
     console.error("Error editing image:", error);
