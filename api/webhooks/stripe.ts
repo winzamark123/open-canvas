@@ -350,74 +350,55 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     throw new Error(`Plan ${newPlanId} not found`);
   }
 
-  const stripe = getStripeClient();
   const customerId = subscription.customer as string;
   if (!customerId) {
     throw new Error("Missing customer ID in subscription");
   }
 
-  // For portal updates, Stripe already updated the subscription in place.
-  // To ensure no proration and immediate charge (similar to checkout flow),
-  // we cancel the current subscription and create a new one with the new price.
-  try {
-    // Cancel the subscription that Stripe just updated
-    console.log(
-      `Cancelling subscription ${subscription.id} for user ${finalUserId} to charge for new plan without proration`,
+  // Stripe has already updated the subscription in place (e.g., via customer portal).
+  // Simply sync our database with Stripe's updated state.
+  console.log(
+    `Syncing subscription ${subscription.id} for user ${finalUserId} with new plan ${newPlanId}`,
+  );
+
+  // Map Stripe subscription status to our database status
+  // Stripe statuses: active, canceled, past_due, unpaid, trialing, etc.
+  const subscriptionStatus =
+    subscription.status === "active" ||
+    subscription.status === "trialing" ||
+    subscription.status === "past_due"
+      ? "active"
+      : subscription.status;
+
+  // Update database to reflect Stripe's updated subscription state
+  await db
+    .update(userSubscriptions)
+    .set({
+      planId: newPlanId,
+      stripeSubscriptionId: subscription.id, // Keep the same subscription ID
+      stripeCustomerId: customerId,
+      status: subscriptionStatus,
+      updatedAt: new Date(),
+    })
+    .where(eq(userSubscriptions.userId, finalUserId));
+
+  console.log(
+    `Successfully updated subscription ${subscription.id} for user ${finalUserId} to plan ${newPlanId}`,
+  );
+
+  // Update KV cache
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, finalUserId))
+    .limit(1);
+
+  if (user) {
+    await updateKVCacheWithPlanLimit(user.clerkId, plan.imageGenerationLimit);
+  } else {
+    console.warn(
+      `Could not find user for userId ${finalUserId}, skipping KV update`,
     );
-    await stripe.subscriptions.cancel(subscription.id);
-    console.log(`Successfully cancelled subscription ${subscription.id}`);
-
-    // Create a new subscription with the new price (immediate charge, no proration)
-    const newSubscription = await stripe.subscriptions.create({
-      customer: customerId,
-      items: [
-        {
-          price: priceId,
-        },
-      ],
-      metadata: {
-        userId: finalUserId,
-        planId: newPlanId,
-        planName: plan.name,
-      },
-    });
-
-    console.log(
-      `Created new subscription ${newSubscription.id} for user ${finalUserId} with plan ${newPlanId}`,
-    );
-
-    // Update database with new subscription ID
-    await db
-      .update(userSubscriptions)
-      .set({
-        planId: newPlanId,
-        stripeSubscriptionId: newSubscription.id,
-        stripeCustomerId: customerId,
-        status: "active",
-        updatedAt: new Date(),
-      })
-      .where(eq(userSubscriptions.userId, finalUserId));
-
-    // Update KV cache
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, finalUserId))
-      .limit(1);
-
-    if (user) {
-      await updateKVCacheWithPlanLimit(user.clerkId, plan.imageGenerationLimit);
-    } else {
-      console.warn(
-        `Could not find user for userId ${finalUserId}, skipping KV update`,
-      );
-    }
-  } catch (error) {
-    console.error(
-      `Error processing subscription update for user ${finalUserId}:`,
-      error,
-    );
-    throw error;
   }
 }
 
@@ -452,6 +433,27 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       `Subscription ${subscription.id} not found in database - may have been deleted already or never existed`,
     );
     return; // Early return - no need to process further
+  }
+
+  // 🔒 FIX: Check if user has another active subscription (might have been upgraded)
+  // This prevents race condition where old subscription deletion overwrites new subscription
+  const [currentSubscription] = await db
+    .select()
+    .from(userSubscriptions)
+    .where(eq(userSubscriptions.userId, userSubscription.userId))
+    .limit(1);
+
+  // If the current subscription has a different stripeSubscriptionId,
+  // this deletion is for an old subscription that was replaced - ignore it
+  if (
+    currentSubscription &&
+    currentSubscription.stripeSubscriptionId !== subscription.id &&
+    currentSubscription.stripeSubscriptionId !== null
+  ) {
+    console.log(
+      `Subscription ${subscription.id} deletion ignored - user already has active subscription ${currentSubscription.stripeSubscriptionId}`,
+    );
+    return; // Don't downgrade - user has a newer subscription
   }
 
   // Update subscription to free tier (no Stripe subscription, but keep customer ID for future purchases)
