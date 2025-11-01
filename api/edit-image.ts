@@ -11,10 +11,6 @@ async function editImageHandler(req: VercelRequest, res: VercelResponse) {
     const {
       prompt,
       images,
-      image_size = "square_hd",
-      num_images = 1,
-      max_images = 1,
-      enable_safety_checker = true,
     } = req.body;
 
     if (!prompt || typeof prompt !== "string") {
@@ -41,13 +37,27 @@ async function editImageHandler(req: VercelRequest, res: VercelResponse) {
       credentials: apiKey,
     });
 
-    // Process images: upload files or use dataURLs directly
+    // Process images: upload to fal storage
     const imageUrls: string[] = [];
 
     for (const imageData of images) {
       if (typeof imageData === "string") {
-        // Already a dataURL or URL, use directly
-        imageUrls.push(imageData);
+        // Check if it's a dataURL or a URL
+        if (imageData.startsWith("data:")) {
+          // Convert dataURL to Blob and upload to fal storage
+          const base64Data = imageData.split(",")[1] || imageData;
+          const mimeMatch = imageData.match(/data:([^;]+);/);
+          const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
+          const byteCharacters = Buffer.from(base64Data, "base64");
+          const blob = new Blob([byteCharacters], { type: mimeType });
+
+          // Upload to fal storage
+          const uploadedUrl = await fal.storage.upload(blob);
+          imageUrls.push(uploadedUrl);
+        } else {
+          // Already a URL, use directly
+          imageUrls.push(imageData);
+        }
       } else if (imageData.data && imageData.type) {
         // File-like object with base64 data, convert to Blob and upload
         const base64Data = imageData.data.split(",")[1] || imageData.data;
@@ -68,15 +78,11 @@ async function editImageHandler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Call fal.ai Seedream v4 Edit API
-    const result = await fal.run("fal-ai/bytedance/seedream/v4/edit", {
+    // Call fal.ai Flux Pro Kontext Max Multi API
+    const result = await fal.run("fal-ai/flux-pro/kontext/max/multi", {
       input: {
         prompt,
-        image_urls: imageUrls,
-        image_size,
-        num_images,
-        max_images,
-        enable_safety_checker,
+        images: imageUrls,
       },
     });
 
@@ -105,7 +111,7 @@ async function editImageHandler(req: VercelRequest, res: VercelResponse) {
     res.json({
       success: true,
       imageData: `data:${mimeType};base64,${base64Image}`,
-      seed: result.data.seed,
+      ...(result.data.seed && { seed: result.data.seed }),
     });
   } catch (error) {
     console.error("Error editing image:", error);
