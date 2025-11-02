@@ -137,8 +137,47 @@ export function baseEdgeHandler(config: BaseHandlerConfig) {
         userUsage,
       };
 
-      // After successful response, log action for authenticated users (only if trackUsage is true)
-      if (userId && clerkUserId && trackUsage) {
+      // Track response status to determine if handler succeeded
+      let responseStatus: number | null = null;
+      const originalStatus = res.status.bind(res);
+      const originalJson = res.json.bind(res);
+      const originalSend = res.send.bind(res);
+
+      // Wrap res.status() to track status code
+      res.status = function (code: number) {
+        responseStatus = code;
+        return originalStatus(code);
+      } as typeof res.status;
+
+      // Wrap res.json() to track status (defaults to 200 if not set)
+      res.json = function (body: any) {
+        if (responseStatus === null) {
+          responseStatus = 200; // Default success status
+        }
+        return originalJson(body);
+      } as typeof res.json;
+
+      // Wrap res.send() to track status (defaults to 200 if not set)
+      res.send = function (body: any) {
+        if (responseStatus === null) {
+          responseStatus = 200; // Default success status
+        }
+        return originalSend(body);
+      } as typeof res.send;
+
+      // Call the wrapped handler function with context
+      await handler(req, res, context);
+
+      // After handler completes, check if response was successful (200-299)
+      // Only track usage if handler succeeded and user is authenticated
+      if (
+        userId &&
+        clerkUserId &&
+        trackUsage &&
+        responseStatus !== null &&
+        responseStatus >= 200 &&
+        responseStatus < 300
+      ) {
         // Wait for DB write and KV increment to complete
         try {
           await logImageAction({
@@ -150,10 +189,16 @@ export function baseEdgeHandler(config: BaseHandlerConfig) {
           console.error("Failed to log image action:", error);
           // Don't fail the request if tracking fails
         }
+      } else if (
+        responseStatus !== null &&
+        responseStatus >= 200 &&
+        responseStatus < 300
+      ) {
+        // Log if usage tracking was skipped (for debugging)
+        console.log(
+          `Usage tracking skipped: userId=${userId}, clerkUserId=${clerkUserId}, trackUsage=${trackUsage}, status=${responseStatus}`,
+        );
       }
-
-      // Call the wrapped handler function with context
-      await handler(req, res, context);
     } catch (error) {
       // If handler threw an error, don't increment usage
       console.error("Handler error:", error);

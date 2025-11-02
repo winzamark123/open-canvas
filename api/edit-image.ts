@@ -8,10 +8,7 @@ async function editImageHandler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const {
-      prompt,
-      images,
-    } = req.body;
+    const { prompt, images } = req.body;
 
     if (!prompt || typeof prompt !== "string") {
       return res.status(400).json({
@@ -37,13 +34,27 @@ async function editImageHandler(req: VercelRequest, res: VercelResponse) {
       credentials: apiKey,
     });
 
-    // Process images: fal.ai supports dataURLs directly, so pass them through
+    // Process images: upload all images to fal storage for better compatibility
     const imageUrls: string[] = [];
 
     for (const imageData of images) {
       if (typeof imageData === "string") {
-        // Already a dataURL or URL, use directly
-        imageUrls.push(imageData);
+        // Handle data URLs - extract base64 data and mime type
+        if (imageData.startsWith("data:image/")) {
+          // Extract mime type and base64 data
+          const [header, base64Data] = imageData.split(",");
+          const mimeMatch = header.match(/data:image\/(\w+);base64/);
+          const mimeType = mimeMatch ? `image/${mimeMatch[1]}` : "image/png";
+
+          // Convert to Blob and upload to fal storage
+          const byteCharacters = Buffer.from(base64Data, "base64");
+          const blob = new Blob([byteCharacters], { type: mimeType });
+          const uploadedUrl = await fal.storage.upload(blob);
+          imageUrls.push(uploadedUrl);
+        } else {
+          // Already a URL (not a data URL), use directly
+          imageUrls.push(imageData);
+        }
       } else if (imageData.data && imageData.type) {
         // File-like object with base64 data, convert to Blob and upload
         const base64Data = imageData.data.split(",")[1] || imageData.data;
@@ -68,7 +79,7 @@ async function editImageHandler(req: VercelRequest, res: VercelResponse) {
     const result = await fal.run("fal-ai/flux-pro/kontext/max/multi", {
       input: {
         prompt,
-        images: imageUrls,
+        image_urls: imageUrls,
       },
     });
 
@@ -100,9 +111,60 @@ async function editImageHandler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (error) {
     console.error("Error editing image:", error);
+
+    // Handle fal.ai ValidationError (status 422)
+    // Check for status 422 first - don't require instanceof Error as ValidationError
+    // might not pass instanceof check
+    if (
+      error &&
+      typeof error === "object" &&
+      "status" in error &&
+      error.status === 422 &&
+      "body" in error &&
+      typeof error.body === "object" &&
+      error.body !== null &&
+      "detail" in error.body
+    ) {
+      return res.status(422).json({
+        success: false,
+        error: "Validation error",
+        message: "Image editing request validation failed",
+        details: error.body.detail,
+      });
+    }
+
+    // Handle other fal.ai errors with status codes
+    if (
+      error &&
+      typeof error === "object" &&
+      "status" in error &&
+      typeof error.status === "number"
+    ) {
+      const status = error.status as number;
+      const errorBody = "body" in error ? error.body : null;
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : (error as any)?.message || "Unknown error";
+
+      return res.status(status).json({
+        success: false,
+        error: "Image editing failed",
+        message: errorMessage,
+        details: errorBody,
+      });
+    }
+
+    // Generic error fallback
     res.status(500).json({
+      success: false,
       error: "Internal server error",
-      message: error instanceof Error ? error.message : "Unknown error",
+      message:
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null && "message" in error
+          ? String((error as any).message)
+          : "Unknown error",
     });
   }
 }

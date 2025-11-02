@@ -75,7 +75,44 @@ async function generateImageHandler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (error) {
     console.error("Error generating image:", error);
+
+    // Handle fal.ai ValidationError (status 422)
+    if (
+      error instanceof Error &&
+      "status" in error &&
+      error.status === 422 &&
+      "body" in error &&
+      typeof error.body === "object" &&
+      error.body !== null &&
+      "detail" in error.body
+    ) {
+      return res.status(422).json({
+        success: false,
+        error: "Validation error",
+        message: "Image generation request validation failed",
+        details: error.body.detail,
+      });
+    }
+
+    // Handle other fal.ai errors with status codes
+    if (
+      error instanceof Error &&
+      "status" in error &&
+      typeof error.status === "number"
+    ) {
+      const status = error.status as number;
+      const errorBody = "body" in error ? error.body : null;
+      return res.status(status).json({
+        success: false,
+        error: "Image generation failed",
+        message: error.message || "Unknown error",
+        details: errorBody,
+      });
+    }
+
+    // Generic error fallback
     res.status(500).json({
+      success: false,
       error: "Internal server error",
       message: error instanceof Error ? error.message : "Unknown error",
     });
