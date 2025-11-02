@@ -10,6 +10,7 @@ import "../excalidraw-app/sentry";
 import ExcalidrawApp from "./App";
 import { SignInPage } from "./components/auth/SignInPage";
 import { SignUpPage } from "./components/auth/SignUpPage";
+import { PrivacyPolicy } from "./components/PrivacyPolicy";
 
 window.__EXCALIDRAW_SHA__ = import.meta.env.VITE_APP_GIT_SHA;
 
@@ -32,6 +33,7 @@ root.render(
         <Routes>
           <Route path="/sign-in/*" element={<SignInPage />} />
           <Route path="/sign-up/*" element={<SignUpPage />} />
+          <Route path="/legal/privacy" element={<PrivacyPolicy />} />
           <Route path="/*" element={<ExcalidrawApp />} />
         </Routes>
       </BrowserRouter>
