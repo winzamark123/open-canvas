@@ -1,4 +1,17 @@
+import { useEffect } from "react";
+
 export function PrivacyPolicy() {
+  useEffect(() => {
+    // Enable scrolling for this page
+    document.body.style.overflow = "auto";
+    document.documentElement.style.overflow = "auto";
+
+    // Cleanup: restore original overflow when component unmounts
+    return () => {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    };
+  }, []);
   return (
     <div className="min-h-screen bg-background overflow-y-auto">
       <div className="mx-auto max-w-4xl px-6 py-12 md:px-8 md:py-16">
@@ -253,7 +266,14 @@ export function PrivacyPolicy() {
             <h2 className="mb-4 text-2xl font-semibold">10. Contact Us</h2>
             <p className="mb-4 text-foreground leading-relaxed">
               If you have any questions or concerns about this Privacy Policy,
-              please contact us at support@opencanvas.studio.
+              please contact us at{" "}
+              <a
+                href="mailto:hello@cerateam.com"
+                className="text-blue-600 hover:text-blue-800 underline"
+              >
+                hello@cerateam.com
+              </a>
+              .
             </p>
           </section>
         </div>

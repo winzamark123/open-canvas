@@ -71,6 +71,8 @@
     "build:version": "yarn --cwd ./excalidraw-app build:version",
     "build": "yarn --cwd ./excalidraw-app build",
     "build:preview": "yarn --cwd ./excalidraw-app build:preview",
+    "dev": "cd excalidraw-app && vite",
+    "dev:server": "vercel dev --listen 3001",
     "start": "vercel dev",
     "start:production": "yarn --cwd ./excalidraw-app start:production",
     "test:all": "yarn test:typecheck && yarn test:code && yarn test:other && yarn test:app --watch=false",

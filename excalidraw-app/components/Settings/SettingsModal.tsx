@@ -286,10 +286,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 For all support inquiries, including billing issues, receipts,
                 and general assistance, please email{" "}
                 <a
-                  href="mailto:winzamark12@gmail.com"
+                  href="mailto:hello@cerateam.com"
                   className="text-blue-500 underline"
                 >
-                  winzamark12@gmail.com
+                  hello@cerateam.com
                 </a>
               </p>
             </div>
