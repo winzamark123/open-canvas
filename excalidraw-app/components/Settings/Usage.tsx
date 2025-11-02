@@ -100,10 +100,18 @@ export const Usage: React.FC<UsageProps> = ({
                 </div>
               </div>
 
-              {getProgressPercentage() >= 80 && (
-                <div className="rounded-md bg-yellow-300 p-3 text-sm text-red-600">
-                  You're approaching your generation limit. Consider upgrading
-                  your plan.
+              {getProgressPercentage() > 80 &&
+                getProgressPercentage() < 100 && (
+                  <div className="rounded-md bg-yellow-300 p-3 text-sm text-red-600">
+                    You're approaching your generation limit. Consider upgrading
+                    your plan.
+                  </div>
+                )}
+
+              {getProgressPercentage() >= 100 && (
+                <div className="rounded-md bg-red-300 p-3 text-sm text-black">
+                  You've reached your generation limit. Consider upgrading your
+                  plan.
                 </div>
               )}
             </CardContent>
