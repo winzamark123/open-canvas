@@ -1,6 +1,6 @@
 export function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-y-auto">
       <div className="mx-auto max-w-4xl px-6 py-12 md:px-8 md:py-16">
         <h1 className="mb-8 text-4xl font-bold">Privacy Policy</h1>
 
