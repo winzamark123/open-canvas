@@ -94,14 +94,11 @@ async function createCheckoutSessionHandler(
     }
 
     // Determine success and cancel URLs
-    let baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      process.env.VERCEL_URL ||
-      "http://localhost:3000";
-
-    // Ensure protocol is included
-    if (baseUrl !== "http://localhost:3000" && !baseUrl.startsWith("http")) {
-      baseUrl = `https://${baseUrl}`;
+    let baseUrl = "";
+    if (process.env.NODE_ENV === "development") {
+      baseUrl = "http://localhost:3000";
+    } else {
+      baseUrl = "https://www.opencanvas.studio";
     }
 
     const successUrl = `${baseUrl}/?checkout=success`;
