@@ -101,7 +101,7 @@ export const Usage: React.FC<UsageProps> = ({
               </div>
 
               {getProgressPercentage() >= 80 && (
-                <div className="rounded-md bg-yellow-50 p-3 text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
+                <div className="rounded-md bg-yellow-300 p-3 text-sm text-red-600">
                   You're approaching your generation limit. Consider upgrading
                   your plan.
                 </div>
