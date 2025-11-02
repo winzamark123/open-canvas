@@ -1,5 +1,8 @@
 import { db, closeConnection } from "./index.js";
 import { plans } from "./schema.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 async function seed() {
   console.log("⏳ Seeding database...");

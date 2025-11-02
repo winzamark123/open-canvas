@@ -18,24 +18,6 @@ export const config = {
 };
 
 /**
- * Get clerkId from userId, using provided clerkId if available
- */
-async function getClerkId(
-  userId: string,
-  clerkId?: string,
-): Promise<string | null> {
-  if (clerkId) return clerkId;
-
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  return user?.clerkId || null;
-}
-
-/**
  * Update KV cache with new plan limit while preserving usage count
  */
 async function updateKVCacheWithPlanLimit(
