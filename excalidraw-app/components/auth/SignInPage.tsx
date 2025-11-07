@@ -1,5 +1,6 @@
 import { SignIn } from "@clerk/clerk-react";
 import { shadcn } from "@clerk/themes";
+import { Link } from "react-router-dom";
 import { Card, CardContent } from "../ui/card";
 import { FieldDescription } from "../ui/field";
 
@@ -52,8 +53,21 @@ function ShadcnSignIn() {
         </CardContent>
       </Card>
       <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
-        and <a href="#">Privacy Policy</a>.
+        By clicking continue, you agree to our{" "}
+        <Link
+          to="/legal/terms"
+          className="text-blue-600 hover:text-blue-800 underline"
+        >
+          Terms of Service
+        </Link>{" "}
+        and{" "}
+        <Link
+          to="/legal/privacy"
+          className="text-blue-600 hover:text-blue-800 underline"
+        >
+          Privacy Policy
+        </Link>
+        .
       </FieldDescription>
     </div>
   );
